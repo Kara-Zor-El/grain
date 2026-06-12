@@ -62,11 +62,16 @@ depends: [
   "ppxlib" { with-dev-setup & >= "0.37.0" & os != "win32" }
   "ctypes" { with-dev-setup & os != "win32" }
   "utop" { with-dev-setup & >= "2.6.0" & os != "win32" }
+<<<<<<<< HEAD:compiler/esy.lock/opam/dune.3.24.2/opam
   "melange" { with-dev-setup & >= "5.1.0-51" & < "7.0" & os != "win32" }
   "uutf" { with-dev-setup }
   # the rev store negotiation test launches a git daemon, needs it to be
   # installed on some distributions
   "conf-git-daemon" { with-test }
+========
+  "melange" { with-dev-setup & >= "5.1.0-51" & os != "win32" }
+<<<<<<<< HEAD:compiler/esy.lock/opam/dune.3.20.2/opam
+>>>>>>>> fd2c3e0 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune.3.23.1/opam
 ]
 url {
   src:
@@ -76,4 +81,24 @@ url {
     "sha512=13082a66a28e940d4b3c9f78b556f6c1455987cd522355ba4502e01e60a3d002d3101b51284726ae21aa87494efa2dc54d016173f05b616bbc5dad714d5714a3"
   ]
 }
+<<<<<<<< HEAD:compiler/esy.lock/opam/dune.3.24.2/opam
 x-commit-hash: "ce734ac25ffb06994a4530426bb06ee8cda19e50"
+========
+x-commit-hash: "1e54fd3f450aae7fb41ffb6b7c8b7a5aed754777"
+========
+  "uutf" { with-dev-setup }
+  # the rev store negotiation test launches a git daemon, needs it to be
+  # installed on some distributions
+  "conf-git-daemon" { with-test }
+]
+url {
+  src:
+    "https://github.com/ocaml/dune/releases/download/3.23.1/dune-3.23.1.tbz"
+  checksum: [
+    "sha256=93b4e7157f6ba8feb61cfc5f86008efd2c59037ba78a017d92b4abf30632348f"
+    "sha512=e5566bedc651292ae54d47ba1cdbcfff48962012c1436d0f9ece49a71aa10a674affc092058b0edee56ab2a2405c545b78fde1c472c0b4704c8f58570a2f46cd"
+  ]
+}
+x-commit-hash: "6f6eee69eda59e355bae2ca4e3ad1af678271883"
+>>>>>>>> 9283a111 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune.3.23.1/opam
+>>>>>>>> fd2c3e0 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune.3.23.1/opam
