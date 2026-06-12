@@ -17,13 +17,14 @@
       "GRAINLSP_BIN_PATH": "#{self.target_dir / 'default' / 'grainlsp' / 'grainlsp.exe'}",
       "GRAINLSP_JS_PATH": "#{self.target_dir / 'default' / 'grainlsp' / 'grainlsp.bc.js'}",
       "CLI_BIN_DIR": "#{self.root / '..' / 'cli' / 'bin'}",
+      "TREE_SITTER_GRAIN_WASM_PATH": "#{self.root / 'vendor' / 'tree-sitter-grain' / 'tree-sitter-grain.wasm'}",
       "TEST_EXEC_PATH": "#{self.target_dir / 'default' / 'test' / 'test.exe'}",
       "TEST_JS_PATH": "#{self.target_dir / 'default' / 'test' / 'test.bc.js'}"
     }
   },
   "scripts": {
     "copy:exe": "cp -f #{$GRAINC_BIN_PATH} #{$GRAINDOC_BIN_PATH} #{$GRAINFORMAT_BIN_PATH} #{$GRAINLSP_BIN_PATH} #{$CLI_BIN_DIR}",
-    "copy:js": "cp -f #{$GRAINC_JS_PATH} #{$GRAINDOC_JS_PATH} #{$GRAINFORMAT_JS_PATH} #{$GRAINLSP_JS_PATH}  #{$CLI_BIN_DIR}",
+    "copy:js": "cp -f #{$GRAINC_JS_PATH} #{$GRAINDOC_JS_PATH} #{$GRAINFORMAT_JS_PATH} #{$GRAINLSP_JS_PATH} #{$TREE_SITTER_GRAIN_WASM_PATH} #{$CLI_BIN_DIR}",
     "clean": "rm -rf #{self.root}/_esy",
     "build:js": "esy b dune build @js --no-buffer -j 2",
     "test": "#{$TEST_EXEC_PATH}",
@@ -48,6 +49,7 @@
     "@opam/reason": ">= 3.11.0 <= 3.15.0",
     "@opam/sedlex": ">= 3.0 < 4.0",
     "@opam/sexplib": "v0.17.0",
+    "@opam/tree-sitter": "0.1.0",
     "@opam/uri": ">= 4.2.0 < 5.0.0",
     "@opam/utf8": "0.1.0",
     "@opam/yojson": "2.1.1",

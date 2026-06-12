@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "esy": "0.9.2",
-    "shx": "^0.4.0"
+    "shx": "^0.4.0",
+    "tree-sitter-cli": "0.26.8"
   },
   "scripts": {
     "link": "npm link",
@@ -20,6 +21,8 @@
     "build": "esy",
     "postbuild": "esy copy:exe",
     "build:js": "esy build:js",
+    "build:tree-sitter-wasm": "cd vendor/tree-sitter-grain && tree-sitter build --wasm",
+    "prebuild:js": "npm run build:tree-sitter-wasm",
     "postbuild:js": "esy copy:js",
     "pretest": "npm run build",
     "test": "esy test",

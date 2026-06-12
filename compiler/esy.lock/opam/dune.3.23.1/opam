@@ -43,7 +43,7 @@ build: [
 depends: [
   # Please keep the lower bound in sync with .github/workflows/workflow.yml,
   # dune-project and min_ocaml_version in bootstrap.ml
-  "ocaml" {>= "4.08"}
+  ("ocaml" {>= "4.14"} | ("ocaml" {>= "4.02" & < "4.14~~"} & "ocamlfind-secondary" & "ocaml-secondary-compiler" {>= "4.14"}))
   "base-unix"
   "base-threads"
   "lwt" { with-dev-setup & os != "win32" }
@@ -62,6 +62,7 @@ depends: [
   "ctypes" { with-dev-setup & os != "win32" }
   "utop" { with-dev-setup & >= "2.6.0" & os != "win32" }
   "melange" { with-dev-setup & >= "5.1.0-51" & os != "win32" }
+<<<<<<<< HEAD:compiler/esy.lock/opam/dune.3.20.2/opam
 ]
 url {
   src:
@@ -72,3 +73,19 @@ url {
   ]
 }
 x-commit-hash: "1e54fd3f450aae7fb41ffb6b7c8b7a5aed754777"
+========
+  "uutf" { with-dev-setup }
+  # the rev store negotiation test launches a git daemon, needs it to be
+  # installed on some distributions
+  "conf-git-daemon" { with-test }
+]
+url {
+  src:
+    "https://github.com/ocaml/dune/releases/download/3.23.1/dune-3.23.1.tbz"
+  checksum: [
+    "sha256=93b4e7157f6ba8feb61cfc5f86008efd2c59037ba78a017d92b4abf30632348f"
+    "sha512=e5566bedc651292ae54d47ba1cdbcfff48962012c1436d0f9ece49a71aa10a674affc092058b0edee56ab2a2405c545b78fde1c472c0b4704c8f58570a2f46cd"
+  ]
+}
+x-commit-hash: "6f6eee69eda59e355bae2ca4e3ad1af678271883"
+>>>>>>>> 9283a111 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune.3.23.1/opam
