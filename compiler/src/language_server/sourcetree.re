@@ -155,6 +155,8 @@ module type Sourcetree = {
       })
     | Pattern({
         pattern: Typedtree.pattern,
+        env: Env.t,
+        expected_type: option(Types.type_expr),
         definition: option(Location.t),
       })
     | Declaration({
@@ -253,6 +255,8 @@ module Sourcetree: Sourcetree = {
       })
     | Pattern({
         pattern: Typedtree.pattern,
+        env: Env.t,
+        expected_type: option(Types.type_expr),
         definition: option(Location.t),
       })
     | Declaration({
@@ -481,6 +485,8 @@ module Sourcetree: Sourcetree = {
                 loc_to_interval(pat.pat_loc),
                 Pattern({
                   pattern: pat,
+                  env: pat.pat_env,
+                  expected_type: Some(pat.pat_type),
                   definition:
                     Env.get_type_definition_loc(pat.pat_type, pat.pat_env),
                 }),

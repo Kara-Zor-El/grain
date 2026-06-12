@@ -84,6 +84,8 @@ module ResponseResult = {
     text_document_sync: Protocol.text_document_sync_kind,
     [@key "hoverProvider"]
     hover_provider: bool,
+    [@key "completionProvider"]
+    completion_provider: Protocol.completion_options,
     [@key "definitionProvider"]
     definition_provider: bool,
     [@key "typeDefinitionProvider"]
@@ -112,6 +114,10 @@ module ResponseResult = {
     document_formatting_provider: true,
     text_document_sync: Full,
     hover_provider: true,
+    completion_provider: {
+      resolve_provider: false,
+      trigger_characters: ["."],
+    },
     definition_provider: true,
     type_definition_provider: true,
     references_provider: false,
