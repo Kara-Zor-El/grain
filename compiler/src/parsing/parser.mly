@@ -19,17 +19,17 @@ module Grain_parsing = struct end
 %token <string> LIDENT UIDENT
 %token <string> STRING BYTES CHAR
 %token LBRACK LBRACKRCARET RBRACK LPAREN RPAREN LBRACE RBRACE LCARET RCARET
-%token COMMA SEMI AS
+%token COMMA SEMI AS [@keyword]
 %token ARROW
 %token EQUAL GETS
 %token UNDERSCORE
 %token COLON QUESTION DOT ELLIPSIS
 
-%token ASSERT FAIL EXCEPTION THROW
+%token ASSERT [@keyword] FAIL [@keyword] EXCEPTION [@keyword] THROW [@keyword]
 
-%token TRUE FALSE VOID
+%token TRUE [@keyword] FALSE [@keyword] VOID [@keyword]
 
-%token LET MUT REC IF WHEN ELSE MATCH WHILE FOR CONTINUE BREAK RETURN
+%token LET [@keyword] MUT [@keyword] REC [@keyword] IF [@keyword] WHEN [@keyword] ELSE [@keyword] MATCH [@keyword] WHILE [@keyword] FOR [@keyword] CONTINUE [@keyword] BREAK [@keyword] RETURN [@keyword]
 %token AT
 
 %token <string> INFIX_10 INFIX_30 INFIX_40 INFIX_50 INFIX_60 INFIX_70
@@ -37,14 +37,14 @@ module Grain_parsing = struct end
 %token <string> PREFIX_150
 %token <string> INFIX_ASSIGNMENT_10
 
-%token ENUM RECORD TYPE MODULE INCLUDE USE PROVIDE ABSTRACT FOREIGN WASM PRIMITIVE
-%token AND
-%token EXCEPT FROM STAR
+%token ENUM [@keyword] RECORD [@keyword] TYPE [@keyword] MODULE [@keyword] INCLUDE [@keyword] USE [@keyword] PROVIDE [@keyword] ABSTRACT [@keyword] FOREIGN [@keyword] WASM [@keyword] PRIMITIVE [@keyword]
+%token AND [@keyword]
+%token EXCEPT [@keyword] FROM [@keyword] STAR
 %token SLASH DASH PIPE
 %token EOL EOF
 
 // reserved tokens
-%token TRY CATCH COLONCOLON MACRO YIELD
+%token TRY [@keyword] CATCH [@keyword] COLONCOLON MACRO [@keyword] YIELD [@keyword]
 
 // Not a real token, this is injected by the lexer
 %token FUN
