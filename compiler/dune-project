@@ -39,6 +39,10 @@
   (synopsis "Grain Language Server Protocol"))
 
 (package
+  (name grain_tree_sitter)
+  (synopsis "Tree-sitter parsing for Grain"))
+
+(package
  (name grain_formatting)
  (synopsis "Grain formatting"))
 

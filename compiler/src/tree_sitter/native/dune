@@ -1,0 +1,11 @@
+(library
+ (name native)
+ (public_name grain_tree_sitter.native)
+ (implements grain_tree_sitter)
+ (modes native)
+ (libraries
+  tree-sitter
+  grain_tree_sitter.grammar
+  grain_tree_sitter.edit
+  grain_tree_sitter.core)
+ (modules grain_tree_sitter grammar))
