@@ -73,6 +73,13 @@ module Backend = {
       };
       Node.named_descendant_for_point_range(node, ~start=point, ~end_=point);
     };
+    let descendant_for_point = (node, ~row, ~column) => {
+      let point = {
+        row,
+        column,
+      };
+      Node.descendant_for_point_range(node, ~start=point, ~end_=point);
+    };
   };
 };
 

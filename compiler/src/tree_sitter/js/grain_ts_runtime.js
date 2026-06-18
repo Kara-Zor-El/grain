@@ -201,3 +201,20 @@ function grain_ts_node_named_descendant_for_point(
   var descendant = node.namedDescendantForPosition(start, end);
   return descendant == null ? 0 : descendant;
 }
+
+//Provides: grain_ts_node_descendant_for_point
+function grain_ts_node_descendant_for_point(
+  node,
+  start_row,
+  start_column,
+  end_row,
+  end_column,
+) {
+  if (node == null || node === 0) {
+    return 0;
+  }
+  var start = { row: start_row, column: start_column };
+  var end = { row: end_row, column: end_column };
+  var descendant = node.descendantForPosition(start, end);
+  return descendant == null ? 0 : descendant;
+}

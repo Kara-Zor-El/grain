@@ -3,7 +3,8 @@ type context_kind =
   | MemberAccess(string)
   | ImportPath
   | KeywordContext
-  | PatternContext;
+  | PatternContext
+  | DocblockContext;
 
 type position = {
   line: int,

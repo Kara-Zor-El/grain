@@ -116,7 +116,7 @@ module ResponseResult = {
     hover_provider: true,
     completion_provider: {
       resolve_provider: false,
-      trigger_characters: ["."],
+      trigger_characters: [".", "@"],
     },
     definition_provider: true,
     type_definition_provider: true,

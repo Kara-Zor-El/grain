@@ -3,7 +3,8 @@ type context_kind =
   | MemberAccess(string)
   | ImportPath
   | KeywordContext
-  | PatternContext;
+  | PatternContext
+  | DocblockContext;
 
 type position = {
   line: int,
@@ -53,6 +54,7 @@ module type S = {
     let named_child_count: t => int;
     let child_by_field_name: (t, string) => option(t);
     let named_descendant_for_point: (t, ~row: int, ~column: int) => option(t);
+    let descendant_for_point: (t, ~row: int, ~column: int) => option(t);
   };
 };
 
@@ -101,18 +103,19 @@ let line_at = (source, pos: position) => {
   };
 };
 
+let is_ident_char = c =>
+  c == '_'
+  || c >= 'a'
+  && c <= 'z'
+  || c >= 'A'
+  && c <= 'Z'
+  || c >= '0'
+  && c <= '9';
+
 let prefix_from_cursor = (source, pos: position) => {
   let line = line_at(source, pos);
   let character =
     Edit.clamp(~min_value=0, ~max_value=String.length(line), pos.character);
-  let is_ident_char = c =>
-    c == '_'
-    || c >= 'a'
-    && c <= 'z'
-    || c >= 'A'
-    && c <= 'Z'
-    || c >= '0'
-    && c <= '9';
   let rec find_start = idx =>
     if (idx <= 0) {
       0;
@@ -123,6 +126,34 @@ let prefix_from_cursor = (source, pos: position) => {
     };
   let start = find_start(character);
   (String.sub(line, start, character - start), start, character);
+};
+
+let prefix_from_doc_attribute = (source, pos: position) => {
+  let line = line_at(source, pos);
+  let character =
+    Edit.clamp(~min_value=0, ~max_value=String.length(line), pos.character);
+  let before_cursor = String.sub(line, 0, character);
+  switch (String.rindex_opt(before_cursor, '@')) {
+  | None => ("", character, character)
+  | Some(at_index) =>
+    let rec valid_suffix = idx =>
+      if (idx >= character) {
+        true;
+      } else if (is_ident_char(line.[idx])) {
+        valid_suffix(idx + 1);
+      } else {
+        false;
+      };
+    if (valid_suffix(at_index + 1)) {
+      (
+        String.sub(line, at_index, character - at_index),
+        at_index,
+        character,
+      );
+    } else {
+      ("", character, character);
+    };
+  };
 };
 
 let member_access_qualifier_from_line = (source, pos: position) => {
@@ -215,16 +246,13 @@ module Make = (Backend: S) => {
     };
   };
 
-  let node_at_point = (source, tree, pos: position) => {
+  let node_at_point = (tree, pos: position) => {
     let root = Tree.root_node(tree);
-    let line = line_at(source, pos);
-    let column =
-      Edit.clamp(
-        ~min_value=0,
-        ~max_value=max(0, String.length(line) - 1),
-        pos.character,
-      );
-    Node.named_descendant_for_point(root, ~row=pos.line, ~column);
+    Node.named_descendant_for_point(
+      root,
+      ~row=pos.line,
+      ~column=pos.character,
+    );
   };
 
   let rec ancestor = (node, pred) =>
@@ -237,6 +265,23 @@ module Make = (Backend: S) => {
         ancestor(parent, pred);
       }
     };
+
+  let cursor_in_doc_comment = (tree, pos: position) => {
+    let root = Tree.root_node(tree);
+    switch (
+      Node.descendant_for_point(root, ~row=pos.line, ~column=pos.character)
+    ) {
+    | None => false
+    | Some(node) =>
+      Node.kind(node) == "doc_comment"
+      || (
+        switch (ancestor(node, n => Node.kind(n) == "doc_comment")) {
+        | Some(_) => true
+        | None => false
+        }
+      )
+    };
+  };
 
   let cursor_before = (pos: position, row, column) =>
     pos.line < row || pos.line == row && pos.character < column;
@@ -386,43 +431,62 @@ module Make = (Backend: S) => {
   };
 
   let context_at = ({source, tree}: parse_tree, pos: position) => {
-    let (prefix, prefix_start, prefix_end) = prefix_from_cursor(source, pos);
+    let in_doc_comment = cursor_in_doc_comment(tree, pos);
+    let (doc_prefix, doc_prefix_start, doc_prefix_end) =
+      prefix_from_doc_attribute(source, pos);
+    let editing_doc_attribute =
+      in_doc_comment && String.contains(doc_prefix, '@');
+    let (prefix, prefix_start, prefix_end) =
+      if (editing_doc_attribute) {
+        (doc_prefix, doc_prefix_start, doc_prefix_end);
+      } else {
+        prefix_from_cursor(source, pos);
+      };
     let edit_range = replace_range(pos, prefix_start, prefix_end);
-    let cursor_byte = byte_offset(source, pos);
-    let in_body =
-      switch (node_at_point(source, tree, pos)) {
-      | None => tree_contains_match_body_cursor(pos, Tree.root_node(tree))
-      | Some(node) =>
-        if (in_match_body_from_node(pos, node)) {
-          true;
-        } else {
-          tree_contains_match_body_cursor(pos, Tree.root_node(tree));
-        }
+    if (editing_doc_attribute) {
+      {
+        kind: DocblockContext,
+        prefix,
+        replace_range: edit_range,
       };
-    let kind =
-      switch (node_at_point(source, tree, pos)) {
-      | None => if (in_body) {PatternContext} else {InScope}
-      | Some(node) =>
-        let kind = detect_kind(pos, source, cursor_byte, node);
-        if (kind == InScope && in_body) {
-          PatternContext;
-        } else {
-          kind;
+    } else {
+      let cursor_byte = byte_offset(source, pos);
+      let node = node_at_point(tree, pos);
+      let in_body =
+        switch (node) {
+        | None => tree_contains_match_body_cursor(pos, Tree.root_node(tree))
+        | Some(node) =>
+          if (in_match_body_from_node(pos, node)) {
+            true;
+          } else {
+            tree_contains_match_body_cursor(pos, Tree.root_node(tree));
+          }
         };
+      let kind =
+        switch (node) {
+        | None => if (in_body) {PatternContext} else {InScope}
+        | Some(node) =>
+          let kind = detect_kind(pos, source, cursor_byte, node);
+          if (kind == InScope && in_body) {
+            PatternContext;
+          } else {
+            kind;
+          };
+        };
+      let kind =
+        switch (kind) {
+        | InScope =>
+          switch (member_access_qualifier_from_line(source, pos)) {
+          | Some(qualifier) => MemberAccess(qualifier)
+          | None => kind
+          }
+        | _ => kind
+        };
+      {
+        kind,
+        prefix,
+        replace_range: edit_range,
       };
-    let kind =
-      switch (kind) {
-      | InScope =>
-        switch (member_access_qualifier_from_line(source, pos)) {
-        | Some(qualifier) => MemberAccess(qualifier)
-        | None => kind
-        }
-      | _ => kind
-      };
-    {
-      kind,
-      prefix,
-      replace_range: edit_range,
     };
   };
 
