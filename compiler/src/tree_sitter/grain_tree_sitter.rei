@@ -4,7 +4,8 @@ type context_kind =
   | ImportPath
   | KeywordContext
   | PatternContext
-  | DocblockContext;
+  | DocblockContext
+  | CallArgument;
 
 type position = {
   line: int,
