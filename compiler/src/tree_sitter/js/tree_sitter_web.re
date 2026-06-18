@@ -55,7 +55,11 @@ module Node = {
   external named_descendant_for_point_raw:
     (t, int, int, int, int) => option(t) =
     "grain_ts_node_named_descendant_for_point";
+  external descendant_for_point_raw: (t, int, int, int, int) => option(t) =
+    "grain_ts_node_descendant_for_point";
 
   let named_descendant_for_point = (node, ~row, ~column) =>
     named_descendant_for_point_raw(node, row, column, row, column);
+  let descendant_for_point = (node, ~row, ~column) =>
+    descendant_for_point_raw(node, row, column, row, column);
 };
