@@ -4,7 +4,8 @@ type context_kind =
   | ImportPath
   | KeywordContext
   | PatternContext
-  | DocblockContext;
+  | DocblockContext
+  | CallArgument;
 
 type position = {
   line: int,
@@ -357,6 +358,57 @@ module Make = (Backend: S) => {
     };
   };
 
+  let cursor_inside = (pos: position, node: Node.t) => {
+    let (start_row, start_column) = Node.start_point(node);
+    let (end_row, end_column) = Node.end_point(node);
+    !cursor_before(pos, start_row, start_column)
+    && !cursor_after(pos, end_row, end_column);
+  };
+
+  let node_or_ancestor = (node, kind) =>
+    if (Node.kind(node) == kind) {
+      Some(node);
+    } else {
+      ancestor(node, n => Node.kind(n) == kind);
+    };
+
+  let in_call_argument_label_position =
+      (pos: position, cursor_byte: int, node: Node.t) => {
+    switch (node_or_ancestor(node, "application_expression")) {
+    | None => false
+    | Some(app) =>
+      switch (Node.child_by_field_name(app, "function")) {
+      | None => false
+      | Some(callee) when cursor_byte < Node.end_byte(callee) => false
+      | Some(callee) =>
+        switch (node_or_ancestor(node, "labeled_application_argument")) {
+        | Some(arg) =>
+          switch (Node.child_by_field_name(arg, "label")) {
+          | Some(label) =>
+            switch (Node.child_by_field_name(label, "value")) {
+            | Some(value) =>
+              cursor_inside(pos, value)
+              || cursor_byte < Node.start_byte(value)
+            | None => true
+            }
+          | None => false
+          }
+        | None =>
+          switch (node_or_ancestor(node, "positional_application_argument")) {
+          | Some(_) => false
+          | None =>
+            switch (Node.child_by_field_name(app, "arguments")) {
+            | Some(args) => cursor_inside(pos, args)
+            | None =>
+              cursor_byte > Node.end_byte(callee)
+              && cursor_byte < Node.end_byte(app)
+            }
+          }
+        }
+      }
+    };
+  };
+
   let member_access_qualifier = (source, node: Node.t, cursor_byte: int) => {
     let text = node_text(source, node);
     if (!String.contains(text, '.')) {
@@ -406,7 +458,12 @@ module Make = (Backend: S) => {
       | None =>
         switch (ancestor(node, n => Node.kind(n) == "use_expression")) {
         | Some(_) => ImportPath
-        | None => InScope
+        | None =>
+          if (in_call_argument_label_position(pos, cursor_byte, node)) {
+            CallArgument;
+          } else {
+            InScope;
+          }
         }
       }
     | _ =>
@@ -421,6 +478,8 @@ module Make = (Backend: S) => {
           | None =>
             if (in_match_body_from_node(pos, node)) {
               PatternContext;
+            } else if (in_call_argument_label_position(pos, cursor_byte, node)) {
+              CallArgument;
             } else {
               InScope;
             }
