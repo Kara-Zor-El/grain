@@ -33,5 +33,6 @@ let cached_tree:
   (~parse_trees: Hashtbl.t('key, (int, parse_tree)), 'key, string) =>
   parse_tree;
 let context_at: (parse_tree, position) => context;
+let callee_name_before_call: (parse_tree, position) => option(string);
 let local_bindings_before: (parse_tree, position) => list(local_binding);
 let on_ready: (unit => unit) => unit;
