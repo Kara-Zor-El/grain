@@ -105,13 +105,7 @@ let line_at = (source, pos: position) => {
 };
 
 let is_ident_char = c =>
-  c == '_'
-  || c >= 'a'
-  && c <= 'z'
-  || c >= 'A'
-  && c <= 'Z'
-  || c >= '0'
-  && c <= '9';
+  c >= '0' && c <= '9' || !Oprint.parenthesized_ident(String.make(1, c));
 
 let prefix_from_cursor = (source, pos: position) => {
   let line = line_at(source, pos);
@@ -371,6 +365,60 @@ module Make = (Backend: S) => {
     } else {
       ancestor(node, n => Node.kind(n) == kind);
     };
+
+  let callee_name_before_call = ({source, tree}: parse_tree, pos: position) => {
+    let cursor_byte = byte_offset(source, pos);
+    let root = Tree.root_node(tree);
+    let node_at_column = column =>
+      switch (Node.named_descendant_for_point(root, ~row=pos.line, ~column)) {
+      | Some(node) => Some(node)
+      | None => Node.descendant_for_point(root, ~row=pos.line, ~column)
+      };
+    let rec find_call_at_or_before = column =>
+      if (column < 0) {
+        None;
+      } else {
+        switch (node_at_column(column)) {
+        | None => find_call_at_or_before(column - 1)
+        | Some(node) =>
+          switch (node_or_ancestor(node, "application_expression")) {
+          | Some(app) => Some(app)
+          | None => find_call_at_or_before(column - 1)
+          }
+        };
+      };
+    switch (find_call_at_or_before(pos.character)) {
+    | None => None
+    | Some(app) =>
+      switch (Node.child_by_field_name(app, "function")) {
+      | None => None
+      | Some(callee) =>
+        if (cursor_byte <= Node.end_byte(callee)) {
+          None;
+        } else {
+          let rec callee_name_from_node = (source, node: Node.t) =>
+            switch (Node.kind(node)) {
+            | "identifier"
+            | "upper_identifier"
+            | "qualified_identifier" => Some(node_text(source, node))
+            | "parenthesized_expression" =>
+              switch (Node.child_by_field_name(node, "expression")) {
+              | None => None
+              | Some(expr) => callee_name_from_node(source, expr)
+              }
+            | _ =>
+              let callee = String.trim(node_text(source, node));
+              switch (callee) {
+              | "" => None
+              | _ => Some(callee)
+              };
+            };
+
+          callee_name_from_node(source, callee);
+        }
+      }
+    };
+  };
 
   let in_call_argument_label_position =
       (pos: position, cursor_byte: int, node: Node.t) => {

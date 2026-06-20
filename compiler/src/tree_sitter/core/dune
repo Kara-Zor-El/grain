@@ -2,4 +2,4 @@
  (name grain_tree_sitter_core)
  (public_name grain_tree_sitter.core)
  (modules grain_tree_sitter)
- (libraries grain_tree_sitter.edit))
+ (libraries grain_typed grain_tree_sitter.edit))
