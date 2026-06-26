@@ -44,7 +44,7 @@ module Grain_parsing = struct end
 %token EOL EOF
 
 // reserved tokens
-%token TRY [@keyword] CATCH [@keyword] COLONCOLON MACRO [@keyword] YIELD [@keyword]
+%token TRY CATCH COLONCOLON MACRO YIELD
 
 // Not a real token, this is injected by the lexer
 %token FUN
