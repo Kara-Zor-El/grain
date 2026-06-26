@@ -2,6 +2,8 @@ type context_kind =
   | InScope
   | MemberAccess(string)
   | ImportPath
+  | ImportFilePath
+  | ImportModuleName(string)
   | KeywordContext
   | PatternContext
   | DocblockContext
