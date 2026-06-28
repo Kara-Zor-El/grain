@@ -107,7 +107,13 @@ let line_at = (source, pos: position) => {
 };
 
 let is_ident_char = c =>
-  c >= '0' && c <= '9' || !Oprint.parenthesized_ident(String.make(1, c));
+  c >= '0'
+  && c <= '9'
+  || c >= 'A'
+  && c <= 'Z'
+  || c >= 'a'
+  && c <= 'z'
+  || c == '_';
 
 let prefix_from_cursor = (source, pos: position) => {
   let line = line_at(source, pos);
@@ -409,13 +415,14 @@ module Make = (Backend: S) => {
   let import_module_context = (~source, ~pos, path_node) => {
     let text = node_text(source, path_node);
     let len = String.length(text);
-    let import_path = if (len >= 2 && text.[0] == '"' && text.[len - 1] == '"') {
-      String.sub(text, 1, len - 2);
-    } else if (len >= 1 && text.[0] == '"') {
-      String.sub(text, 1, len - 1);
-    } else {
-      "";
-    };
+    let import_path =
+      if (len >= 2 && text.[0] == '"' && text.[len - 1] == '"') {
+        String.sub(text, 1, len - 2);
+      } else if (len >= 1 && text.[0] == '"') {
+        String.sub(text, 1, len - 1);
+      } else {
+        "";
+      };
     let (prefix, prefix_start, prefix_end) = prefix_from_cursor(source, pos);
     Some((ImportModuleName(import_path), prefix, prefix_start, prefix_end));
   };
@@ -471,14 +478,14 @@ module Make = (Backend: S) => {
         } else {
           switch (module_node, path_node) {
           | (Some(_), Some(path_node)) =>
-            import_module_context(~source, ~pos, path_node);
+            import_module_context(~source, ~pos, path_node)
           | (None, Some(path_node))
               when Node.end_byte(include_decl) > Node.end_byte(path_node) =>
-            import_module_context(~source, ~pos, path_node);
+            import_module_context(~source, ~pos, path_node)
           | _ => None
           };
         };
-      }
+      };
     };
   };
 
