@@ -1,8 +1,0 @@
-(library
- (name js)
- (public_name grain_tree_sitter.js)
- (implements grain_tree_sitter)
- (libraries grain_tree_sitter.edit grain_tree_sitter.core)
- (modules grain_tree_sitter tree_sitter_web)
- (js_of_ocaml
-  (javascript_files grain_ts_runtime.js)))

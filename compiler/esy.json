@@ -17,7 +17,7 @@
       "GRAINLSP_BIN_PATH": "#{self.target_dir / 'default' / 'grainlsp' / 'grainlsp.exe'}",
       "GRAINLSP_JS_PATH": "#{self.target_dir / 'default' / 'grainlsp' / 'grainlsp.bc.js'}",
       "CLI_BIN_DIR": "#{self.root / '..' / 'cli' / 'bin'}",
-      "TREE_SITTER_GRAIN_WASM_PATH": "#{self.root / 'vendor' / 'tree-sitter-grain' / 'tree-sitter-grain.wasm'}",
+      "TREE_SITTER_GRAIN_WASM_PATH": "#{self.root / '..' / '..' / 'grain-tree-sitter.ml' / 'vendor' / 'tree-sitter-grain' / 'tree-sitter-grain.wasm'}",
       "TEST_EXEC_PATH": "#{self.target_dir / 'default' / 'test' / 'test.exe'}",
       "TEST_JS_PATH": "#{self.target_dir / 'default' / 'test' / 'test.bc.js'}"
     }
@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@grain/binaryen.ml": ">= 0.34.0 < 0.35.0",
+    "@grain/grain-tree-sitter.ml": "*",
     "@opam/cmdliner": ">= 1.1.1 < 2.0.0",
     "@opam/dune": ">= 3.17.1 < 4.0.0",
     "@opam/dune-build-info": ">= 3.17.1 < 4.0.0",
@@ -70,7 +71,8 @@
     "@opam/pastel": "reasonml/reason-native:pastel.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
     "@opam/rely": "reasonml/reason-native:rely.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
     "@opam/ocamlfind": "1.9.8",
-    "@opam/num": "1.5"
+    "@opam/num": "1.5",
+    "@grain/grain-tree-sitter.ml": "link:../../grain-tree-sitter.ml"
   },
   "installConfig": {
     "pnp": false

@@ -1,5 +1,5 @@
 {
-  "checksum": "bc1dd82bdc10604a7e3d1d1436af2105",
+  "checksum": "ec8575122d98b1aba852f257e739ddbc",
   "root": "@grain/compiler@link-dev:./esy.json",
   "node": {
     "ocaml@5.2.0@d41d8cd9": {
@@ -807,14 +807,14 @@
         "@opam/ppxlib_jane@opam:v0.17.0@9e98e420",
         "@opam/ppxlib@opam:0.35.0@8cd01f8f",
         "@opam/dune@opam:3.23.1@9ab48dae",
-        "@opam/base@opam:v0.17.3@4f79f92d",
+        "@opam/base@opam:v0.17.3@1b4d501e",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
         "ocaml@5.2.0@d41d8cd9", "@opam/sexplib0@opam:v0.17.0@db8af2c0",
         "@opam/ppxlib_jane@opam:v0.17.0@9e98e420",
         "@opam/ppxlib@opam:0.35.0@8cd01f8f",
-        "@opam/dune@opam:3.23.1@9ab48dae", "@opam/base@opam:v0.17.3@4f79f92d"
+        "@opam/dune@opam:3.23.1@9ab48dae", "@opam/base@opam:v0.17.3@1b4d501e"
       ],
       "available": [
         [ "darwin", "x86_64" ],
@@ -1238,8 +1238,8 @@
         [ "windows", "x86_64" ]
       ]
     },
-    "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@69474e26": {
-      "id": "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@69474e26",
+    "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@c97ac62b": {
+      "id": "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@c97ac62b",
       "name": "@opam/ocaml_intrinsics_kernel",
       "version": "opam:v0.17.2",
       "source": {
@@ -1336,7 +1336,7 @@
         "@opam/dune@opam:3.23.1@9ab48dae", "@opam/csexp@opam:1.5.2@46614bf4",
         "@opam/chrome-trace@opam:3.23.1@5c3db1c4",
         "@opam/camlp-streams@opam:5.0.1@8e96208c",
-        "@opam/base@opam:v0.17.3@4f79f92d",
+        "@opam/base@opam:v0.17.3@1b4d501e",
         "@opam/astring@opam:0.8.5@9975798d",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
@@ -1359,7 +1359,7 @@
         "@opam/dune@opam:3.23.1@9ab48dae", "@opam/csexp@opam:1.5.2@46614bf4",
         "@opam/chrome-trace@opam:3.23.1@5c3db1c4",
         "@opam/camlp-streams@opam:5.0.1@8e96208c",
-        "@opam/base@opam:v0.17.3@4f79f92d",
+        "@opam/base@opam:v0.17.3@1b4d501e",
         "@opam/astring@opam:0.8.5@9975798d"
       ],
       "available": [
@@ -2409,8 +2409,8 @@
         [ "windows", "x86_64" ]
       ]
     },
-    "@opam/base@opam:v0.17.3@4f79f92d": {
-      "id": "@opam/base@opam:v0.17.3@4f79f92d",
+    "@opam/base@opam:v0.17.3@1b4d501e": {
+      "id": "@opam/base@opam:v0.17.3@1b4d501e",
       "name": "@opam/base",
       "version": "opam:v0.17.3",
       "source": {
@@ -2428,13 +2428,13 @@
       "overrides": [],
       "dependencies": [
         "ocaml@5.2.0@d41d8cd9", "@opam/sexplib0@opam:v0.17.0@db8af2c0",
-        "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@69474e26",
+        "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@c97ac62b",
         "@opam/dune-configurator@opam:3.23.1@6189fe3f",
         "@opam/dune@opam:3.23.1@9ab48dae", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
         "ocaml@5.2.0@d41d8cd9", "@opam/sexplib0@opam:v0.17.0@db8af2c0",
-        "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@69474e26",
+        "@opam/ocaml_intrinsics_kernel@opam:v0.17.2@c97ac62b",
         "@opam/dune-configurator@opam:3.23.1@6189fe3f",
         "@opam/dune@opam:3.23.1@9ab48dae"
       ],
@@ -2536,6 +2536,26 @@
         [ "windows", "x86_64" ]
       ]
     },
+    "@grain/grain-tree-sitter.ml@link:../../grain-tree-sitter.ml": {
+      "id": "@grain/grain-tree-sitter.ml@link:../../grain-tree-sitter.ml",
+      "name": "@grain/grain-tree-sitter.ml",
+      "version": "link:../../grain-tree-sitter.ml",
+      "source": { "type": "link", "path": "../../grain-tree-sitter.ml" },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@5.2.0@d41d8cd9", "@opam/tree-sitter@opam:0.1.0@e4edd63a",
+        "@opam/reason@opam:3.15.0@b096e175",
+        "@opam/dune@opam:3.23.1@9ab48dae"
+      ],
+      "devDependencies": [],
+      "installConfig": { "pnp": false },
+      "available": [
+        [ "darwin", "x86_64" ],
+        [ "darwin", "arm64" ],
+        [ "linux", "x86_64" ],
+        [ "windows", "x86_64" ]
+      ]
+    },
     "@grain/compiler@link-dev:./esy.json": {
       "id": "@grain/compiler@link-dev:./esy.json",
       "name": "@grain/compiler",
@@ -2562,6 +2582,7 @@
         "@opam/dune-build-info@opam:3.23.1@988a6e53",
         "@opam/dune@opam:3.23.1@9ab48dae",
         "@opam/cmdliner@opam:1.3.0@8e6dd99f",
+        "@grain/grain-tree-sitter.ml@link:../../grain-tree-sitter.ml",
         "@grain/binaryen.ml@0.34.0@d41d8cd9"
       ],
       "devDependencies": [
