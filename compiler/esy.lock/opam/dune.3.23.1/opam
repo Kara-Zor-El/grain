@@ -58,22 +58,10 @@ depends: [
   "ppx_expect" { with-dev-setup & >= "v0.17" & os != "win32" }
   "spawn" { with-dev-setup }
   "ppx_inline_test" { with-dev-setup & os != "win32" }
-  "ppxlib" { with-dev-setup & >= "0.35.0" & os != "win32" }
+  "ppxlib" { with-dev-setup & >= "0.37.0" & os != "win32" }
   "ctypes" { with-dev-setup & os != "win32" }
   "utop" { with-dev-setup & >= "2.6.0" & os != "win32" }
   "melange" { with-dev-setup & >= "5.1.0-51" & os != "win32" }
-<<<<<<<< HEAD:compiler/esy.lock/opam/dune.3.20.2/opam
-]
-url {
-  src:
-    "https://github.com/ocaml/dune/releases/download/3.20.2/dune-3.20.2.tbz"
-  checksum: [
-    "sha256=b1a86b2d60bdb4a8b9bb6861bdf2f9f28a6e7cb5d833ce81afecceb9ef9ca549"
-    "sha512=ed14df9163e487d4ae7d0a2427eaab7823ef1f0ef2d93f0b783e6f163bbd5b44ba73f055d60b84e76f476fe11d38e794013628a1da776d9ec13cca9666e7b7ff"
-  ]
-}
-x-commit-hash: "1e54fd3f450aae7fb41ffb6b7c8b7a5aed754777"
-========
   "uutf" { with-dev-setup }
   # the rev store negotiation test launches a git daemon, needs it to be
   # installed on some distributions
@@ -88,4 +76,3 @@ url {
   ]
 }
 x-commit-hash: "6f6eee69eda59e355bae2ca4e3ad1af678271883"
->>>>>>>> 9283a111 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune.3.23.1/opam
