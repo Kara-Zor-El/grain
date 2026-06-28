@@ -2504,6 +2504,26 @@
         [ "windows", "x86_64" ]
       ]
     },
+    "@grain/grain-tree-sitter.ml@link:../../grain-tree-sitter.ml": {
+      "id": "@grain/grain-tree-sitter.ml@link:../../grain-tree-sitter.ml",
+      "name": "@grain/grain-tree-sitter.ml",
+      "version": "link:../../grain-tree-sitter.ml",
+      "source": { "type": "link", "path": "../../grain-tree-sitter.ml" },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@5.2.0@d41d8cd9", "@opam/tree-sitter@opam:0.1.0@e4edd63a",
+        "@opam/reason@opam:3.15.0@b096e175",
+        "@opam/dune@opam:3.23.1@9ab48dae"
+      ],
+      "devDependencies": [],
+      "installConfig": { "pnp": false },
+      "available": [
+        [ "darwin", "x86_64" ],
+        [ "darwin", "arm64" ],
+        [ "linux", "x86_64" ],
+        [ "windows", "x86_64" ]
+      ]
+    },
     "@grain/compiler@link-dev:./esy.json": {
       "id": "@grain/compiler@link-dev:./esy.json",
       "name": "@grain/compiler",
