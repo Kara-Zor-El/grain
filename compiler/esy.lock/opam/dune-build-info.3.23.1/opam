@@ -23,7 +23,6 @@ depends: [
   "dune" {>= "3.20"}
 ========
   "dune" {>= "3.23"}
->>>>>>>> 9283a111 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune-build-info.3.23.1/opam
   "ocaml" {>= "4.08"}
 >>>>>>>> fd2c3e0 (chore(compiler): Add/update deps required):compiler/esy.lock/opam/dune-build-info.3.23.1/opam
   "odoc" {with-doc}
