@@ -226,9 +226,17 @@ module DidOpen = {
         ~uri: Protocol.uri,
         ~compiled_code: Hashtbl.t(Protocol.uri, code),
         ~documents: Hashtbl.t(Protocol.uri, string),
+        ~parse_trees:
+           Hashtbl.t(Protocol.uri, (int, Grain_tree_sitter.parse_tree)),
         params: RequestParams.t,
       ) => {
     Hashtbl.replace(documents, uri, params.text_document.text);
+    let _ =
+      Grain_tree_sitter.cached_tree(
+        ~parse_trees,
+        uri,
+        params.text_document.text,
+      );
 
     let compilerRes = compile_source(uri, params.text_document.text);
     switch (compilerRes) {
@@ -291,11 +299,14 @@ module DidChange = {
         ~uri: Protocol.uri,
         ~compiled_code: Hashtbl.t(Protocol.uri, code),
         ~documents: Hashtbl.t(Protocol.uri, string),
+        ~parse_trees:
+           Hashtbl.t(Protocol.uri, (int, Grain_tree_sitter.parse_tree)),
         params: RequestParams.t,
       ) => {
     // TODO: Handle all `content_changes` items
     let change = List.hd(params.content_changes);
     Hashtbl.replace(documents, uri, change.text);
+    let _ = Grain_tree_sitter.cached_tree(~parse_trees, uri, change.text);
 
     let compilerRes = compile_source(uri, change.text);
     switch (compilerRes) {

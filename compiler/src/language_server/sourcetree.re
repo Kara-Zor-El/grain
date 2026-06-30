@@ -149,6 +149,11 @@ module type Sourcetree = {
         arg_label: Typedtree.argument_label,
         label_specified: bool,
       })
+    | Application({
+        fun_expr: Typedtree.expression,
+        args: list(Typedtree.argument_value),
+        loc: Location.t,
+      })
     | Type({
         core_type: Typedtree.core_type,
         definition: option(Location.t),
@@ -248,6 +253,11 @@ module Sourcetree: Sourcetree = {
         loc: Location.t,
         arg_label: Typedtree.argument_label,
         label_specified: bool,
+      })
+    | Application({
+        fun_expr: Typedtree.expression,
+        args: list(Typedtree.argument_value),
+        loc: Location.t,
       })
     | Type({
         core_type: Typedtree.core_type,
@@ -444,20 +454,30 @@ module Sourcetree: Sourcetree = {
                     ),
                     ...segments^,
                   ]
-              | TExpApp(_, _, args) =>
+              | TExpApp(fun_expr, _, args) =>
                 segments :=
-                  List.map(
-                    ({arg_label, arg_label_specified, arg_expr}) =>
-                      (
-                        loc_to_interval(arg_expr.exp_loc),
-                        Argument({
-                          loc: arg_expr.exp_loc,
-                          arg_label,
-                          label_specified: arg_label_specified,
-                        }),
-                      ),
-                    args,
-                  )
+                  [
+                    (
+                      loc_to_interval(exp.exp_loc),
+                      Application({
+                        fun_expr,
+                        args,
+                        loc: exp.exp_loc,
+                      }),
+                    ),
+                    ...List.map(
+                         ({arg_label, arg_label_specified, arg_expr}) =>
+                           (
+                             loc_to_interval(arg_expr.exp_loc),
+                             Argument({
+                               loc: arg_expr.exp_loc,
+                               arg_label,
+                               label_specified: arg_label_specified,
+                             }),
+                           ),
+                         args,
+                       ),
+                  ]
                   @ segments^
               | _ =>
                 segments :=
