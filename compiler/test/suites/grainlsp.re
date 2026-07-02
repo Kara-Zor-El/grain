@@ -1,30 +1,10 @@
 open Grain_tests.TestFramework;
 open Grain_tests.Runner;
+open Grain_tests_utils.Lsp_test_utils;
 open Grain_utils;
 
 let {describe} =
   describeConfig |> withCustomMatchers(customMatchers) |> build;
-
-let lsp_position = (line, char) => {
-  `Assoc([("line", `Int(line)), ("character", `Int(char))]);
-};
-
-let lsp_text_document_position = (uri, line, char) => {
-  `Assoc([
-    ("textDocument", `Assoc([("uri", `String(uri))])),
-    ("position", lsp_position(line, char)),
-  ]);
-};
-
-let string_contains = (haystack, needle) =>
-  try(
-    {
-      ignore(Str.search_forward(Str.regexp_string(needle), haystack, 0));
-      true;
-    }
-  ) {
-  | Not_found => false
-  };
 
 let lsp_range = (start_position, end_position) => {
   let (start_line, start_char) = start_position;
@@ -88,12 +68,6 @@ let lsp_location = (uri, range_bounds) => {
     ("uri", `String(uri)),
     ("range", lsp_range(start_pos, end_pos)),
   ]);
-};
-
-let make_test_utils_uri = filename => {
-  let filename = Filepath.to_string(Fp.At.(test_libs_dir / filename));
-  let uri = Uri.make(~scheme="file", ~host="", ~path=filename, ());
-  Uri.to_string(uri);
 };
 
 describe("grainlsp", ({test, testSkip}) => {
@@ -829,204 +803,6 @@ let b = 2 and c = 3
       ]),
     ]),
   );
-
-  test("completion_local_value", ({expect}) => {
-    let code_uri = "file:///a.gr";
-    let code = {|module A
-let apple = 1
-let banana = app
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 2, 16),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"apple"|})).toBe(true);
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_docblock_attribute", ({expect}) => {
-    let code_uri = "file:///a.gr";
-    let code = {|module A
-/**
- * Retrieves an element.
- * @pa
- */
-let get = (index, array) => array[index]
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 3, 5),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"@param"|})).toBe(true);
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_optional_argument", ({expect}) => {
-    let code_uri = "file:///a.gr";
-    let code = {|module A
-let f = (required, optional=1) => required + optional
-f(1, )
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 2, 4),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"optional"|})).toBe(true);
-    expect.bool(string_contains(result, {|"newText":"optional="|})).toBe(
-      true,
-    );
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_optional_argument_imported", ({expect}) => {
-    let code_uri = "file:///a.gr";
-    let code = {|module A
-print(1, )
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 1, 8),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"suffix"|})).toBe(true);
-    expect.bool(string_contains(result, {|"newText":"suffix="|})).toBe(
-      true,
-    );
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_import_relative_path", ({expect}) => {
-    let code_uri = make_test_utils_uri("a.gr");
-    let code = {|module A
-from "./prov
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 1, 11),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"./provideAll.gr"|})).toBe(
-      true,
-    );
-    expect.bool(string_contains(result, {|"kind":17|})).toBe(true);
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_import_stdlib_path", ({expect}) => {
-    let code_uri = make_test_utils_uri("a.gr");
-    let code = {|module A
-from "arr
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 1, 9),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"array"|})).toBe(true);
-    expect.bool(string_contains(result, {|"kind":17|})).toBe(true);
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_import_module_name", ({expect}) => {
-    let code_uri = make_test_utils_uri("a.gr");
-    let code = {|module A
-from "./provideAll.gr" include Prov
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 1, 35),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"ProvideAll"|})).toBe(
-      true,
-    );
-    expect.bool(string_contains(result, {|"kind":9|})).toBe(true);
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
-
-  test("completion_import_module_name_empty_prefix", ({expect}) => {
-    let code_uri = make_test_utils_uri("a.gr");
-    let code = {|module A
-from "./provideAll.gr" include
-|};
-    let (setup_request, teardown_request) =
-      lsp_setup_teardown_requests(code_uri, code);
-    let request =
-      lsp_input(
-        "textDocument/completion",
-        lsp_text_document_position(code_uri, 1, 30),
-      );
-    let (result, code) =
-      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
-
-    expect.bool(string_contains(result, {|"label":"ProvideAll"|})).toBe(
-      true,
-    );
-    expect.bool(string_contains(result, {|"kind":9|})).toBe(true);
-    expect.bool(string_contains(result, {|"isIncomplete":false|})).toBe(
-      true,
-    );
-    expect.int(code).toBe(0);
-  });
 
   assertLspDiagnostics(
     "compile_error1",
