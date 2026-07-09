@@ -62,6 +62,97 @@ let compile = (file, src) => {
   compile_string(~hook=stop_after_typed_well_formed, ~name=file, src);
 };
 
+let replace_line_range = (source, range: Protocol.range, replacement) => {
+  let lines = String.split_on_char('\n', source);
+  let start_line = range.range_start.line;
+  let end_line = range.range_end.line;
+  if (start_line != end_line) {
+    source;
+  } else {
+    switch (List.nth_opt(lines, start_line)) {
+    | None => source
+    | Some(line) =>
+      let before = String.sub(line, 0, range.range_start.character);
+      let after =
+        String.sub(
+          line,
+          range.range_end.character,
+          String.length(line) - range.range_end.character,
+        );
+      let next_line = before ++ replacement ++ after;
+      List.mapi((idx, l) => idx == start_line ? next_line : l, lines)
+      |> String.concat("\n");
+    };
+  };
+};
+
+let message_contains = (needle, haystack) => {
+  let needle_len = String.length(needle);
+  let haystack_len = String.length(haystack);
+  let rec loop = idx =>
+    if (idx + needle_len > haystack_len) {
+      false;
+    } else if (String.sub(haystack, idx, needle_len) == needle) {
+      true;
+    } else {
+      loop(idx + 1);
+    };
+  needle_len == 0 ? true : loop(0);
+};
+
+let recover_source_from_diagnostics = (source, errors) =>
+  List.fold_left(
+    (source, diagnostic: Protocol.diagnostic) =>
+      if (String.starts_with(~prefix="Unbound value", diagnostic.message)) {
+        replace_line_range(source, diagnostic.range, "true");
+      } else if (message_contains(
+                   "Expected an expression",
+                   diagnostic.message,
+                 )) {
+        replace_line_range(source, diagnostic.range, "void");
+      } else {
+        source;
+      },
+    source,
+    errors,
+  );
+
+let try_compile_recovered = (filename, source, errors) => {
+  let recovered = recover_source_from_diagnostics(source, errors);
+  if (recovered == source) {
+    None;
+  } else {
+    switch (
+      Config.preserve_config(() => {
+        Config.print_warnings := false;
+        compile(filename, recovered);
+      })
+    ) {
+    | exception _ => None
+    | {cstate_desc: TypedWellFormed(typed_program)} => Some(typed_program)
+    | _ => None
+    };
+  };
+};
+
+let store_compiled_program =
+    (
+      ~compiled_code: Hashtbl.t(Protocol.uri, code),
+      uri,
+      typed_program: Typedtree.typed_program,
+      ~dirty,
+    ) => {
+  Hashtbl.replace(
+    compiled_code,
+    uri,
+    {
+      program: typed_program,
+      sourcetree: Sourcetree.from_program(typed_program),
+      dirty,
+    },
+  );
+};
+
 let compile_source = (uri, source) => {
   let filename = Utils.uri_to_filename(uri);
 
@@ -144,8 +235,13 @@ let compile_source = (uri, source) => {
         },
         [exn, ...Grain_parsing.Location.reported_exceptions^],
       );
+    let program =
+      switch (try_compile_recovered(filename, source, errors)) {
+      | Some(typed_program) => Some(typed_program)
+      | None => None
+      };
     {
-      program: None,
+      program,
       error: errors,
       warnings: [],
     };
@@ -241,21 +337,21 @@ module DidOpen = {
     let compilerRes = compile_source(uri, params.text_document.text);
     switch (compilerRes) {
     | {program: Some(typed_program), error: [], warnings} =>
-      Hashtbl.replace(
-        compiled_code,
+      store_compiled_program(
+        ~compiled_code,
         uri,
-        {
-          program: typed_program,
-          sourcetree: Sourcetree.from_program(typed_program),
-          dirty: false,
-        },
+        typed_program,
+        ~dirty=false,
       );
       switch (warnings) {
       | [] => clear_diagnostics(~uri, ())
       | _ => send_diagnostics(~uri, warnings, [])
       };
 
-    | {program, error: [_, ..._] as errs, warnings} =>
+    | {program: Some(typed_program), error: [_, ..._] as errs, warnings} =>
+      store_compiled_program(~compiled_code, uri, typed_program, ~dirty=true);
+      send_diagnostics(~uri, warnings, errs);
+    | {program: None, error: [_, ..._] as errs, warnings} =>
       switch (Hashtbl.find_opt(compiled_code, uri)) {
       | Some(code) =>
         Hashtbl.replace(
@@ -311,21 +407,21 @@ module DidChange = {
     let compilerRes = compile_source(uri, change.text);
     switch (compilerRes) {
     | {program: Some(typed_program), error: [], warnings} =>
-      Hashtbl.replace(
-        compiled_code,
+      store_compiled_program(
+        ~compiled_code,
         uri,
-        {
-          program: typed_program,
-          sourcetree: Sourcetree.from_program(typed_program),
-          dirty: false,
-        },
+        typed_program,
+        ~dirty=false,
       );
       switch (warnings) {
       | [] => clear_diagnostics(~uri, ())
       | _ => send_diagnostics(~uri, warnings, [])
       };
 
-    | {program, error: [_, ..._] as errs, warnings} =>
+    | {program: Some(typed_program), error: [_, ..._] as errs, warnings} =>
+      store_compiled_program(~compiled_code, uri, typed_program, ~dirty=true);
+      send_diagnostics(~uri, warnings, errs);
+    | {program: None, error: [_, ..._] as errs, warnings} =>
       switch (Hashtbl.find_opt(compiled_code, uri)) {
       | Some(code) =>
         Hashtbl.replace(

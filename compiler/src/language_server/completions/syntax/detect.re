@@ -1,26 +1,237 @@
 open Types;
+open Grammar;
 
-let member_access_qualifier =
-    (tree: parse_tree, node: Tree.node, cursor_byte: int) => {
-  let text = Tree.node_text(tree, node);
-  if (!String.contains(text, '.')) {
-    None;
+let is_incomplete_typed_let_declaration = (node: Tree.node) =>
+  Tree.node_kind(node) == Kind.let_declaration
+  && Option.is_none(Util.named_child_by_kind(node, Kind.value_bindings))
+  && Option.is_some(Tree.node_child_by_field_name(node, Field.pattern));
+
+let incomplete_let_type_on_line = (source, pos: position, decl: Tree.node) => {
+  let (row, _) = Tree.node_start_point(decl);
+  let (end_row, end_col) = Tree.node_end_point(decl);
+  if (pos.line != row && pos.line != end_row) {
+    false;
   } else {
-    let node_start = Tree.node_start_byte(node);
-    let cursor_in_node = cursor_byte - node_start;
-    if (cursor_in_node < 0 || cursor_in_node > String.length(text)) {
-      None;
-    } else {
-      let before_cursor = String.sub(text, 0, cursor_in_node);
-      switch (String.rindex_opt(before_cursor, '.')) {
-      | None => None
-      | Some(dot_index) =>
-        let qualifier = String.sub(text, 0, dot_index);
-        qualifier == "" ? None : Some(qualifier);
-      };
+    switch (
+      Tree.node_child_by_field_name(decl, Field.pattern),
+      Tree.node_child_by_field_name(decl, Field.type_),
+    ) {
+    | (Some(pattern), None) =>
+      if (pos.line != row) {
+        false;
+      } else {
+        let (_, pattern_end_col) = Tree.node_end_point(pattern);
+        pos.character > pattern_end_col
+        || pos.character == pattern_end_col
+        && Tree.node_kind(pattern) == Kind.typed_pattern;
+      }
+    | (Some(_), Some(type_node)) =>
+      let (type_end_row, type_end_col) = Tree.node_end_point(type_node);
+      Util.cursor_in_node_span(source, pos, type_node)
+      || pos.line == type_end_row
+      && pos.character > type_end_col
+      || end_row == pos.line
+      && pos.character > end_col
+      && row == end_row;
+    | _ => false
     };
   };
 };
+
+let rec incomplete_let_type_annotation_on_line =
+        (source, pos: position, node: Tree.node) =>
+  if (Tree.node_kind(node) == Kind.let_declaration
+      && is_incomplete_typed_let_declaration(node)) {
+    let (row, _) = Tree.node_start_point(node);
+    let (end_row, _) = Tree.node_end_point(node);
+    if (row == pos.line || end_row == pos.line) {
+      incomplete_let_type_on_line(source, pos, node);
+    } else {
+      false;
+    };
+  } else {
+    Util.exists_named_child(
+      node,
+      incomplete_let_type_annotation_on_line(source, pos),
+    );
+  };
+
+let cursor_in_incomplete_let_type_annotation =
+    (tree: parse_tree, source, pos: position, node: Tree.node) =>
+  switch (
+    Tree.ancestor(node, n =>
+      Tree.node_kind(n) == Kind.let_declaration
+      && is_incomplete_typed_let_declaration(n)
+    )
+  ) {
+  | Some(decl) => incomplete_let_type_on_line(source, pos, decl)
+  | None =>
+    incomplete_let_type_annotation_on_line(source, pos, Tree.root(tree))
+  };
+
+let cursor_after_incomplete_tuple_start = (pos: position, tuple: Tree.node) => {
+  let (start_row, start_col) = Tree.node_start_point(tuple);
+  pos.line == start_row && pos.character > start_col;
+};
+
+let rec open_incomplete_tuple_in_enum_body =
+        (source, pos: position, node: Tree.node) =>
+  if (Tree.node_kind(node) == Kind.enum_variant) {
+    switch (
+      Util.named_child_by_kind(node, Kind.incomplete_data_constructor_tuple)
+    ) {
+    | Some(tuple) =>
+      Util.cursor_in_node_span(source, pos, node)
+      && (
+        Util.cursor_in_node_span(source, pos, tuple)
+        || cursor_after_incomplete_tuple_start(pos, tuple)
+      )
+    | None => false
+    };
+  } else {
+    Util.exists_named_child(
+      node,
+      open_incomplete_tuple_in_enum_body(source, pos),
+    );
+  };
+
+let cursor_in_enum_constructor_tuple =
+    (tree: parse_tree, source, pos: position, node: Tree.node) =>
+  if (open_incomplete_tuple_in_enum_body(source, pos, Tree.root(tree))) {
+    true;
+  } else {
+    switch (
+      Util.ancestor_of_kinds(
+        node,
+        [Kind.incomplete_data_constructor_tuple, Kind.data_constructor_tuple],
+      )
+    ) {
+    | Some(tuple) =>
+      switch (Tree.node_parent(tuple)) {
+      | Some(parent) when Tree.node_kind(parent) == Kind.enum_variant =>
+        Tree.node_kind(tuple) == Kind.incomplete_data_constructor_tuple
+        || Util.cursor_in_node_span(source, pos, tuple)
+      | _ => false
+      }
+    | None => false
+    };
+  };
+
+let cursor_in_type_reference =
+    (tree: parse_tree, source, pos: position, _cursor_byte, node: Tree.node) =>
+  if (cursor_in_incomplete_let_type_annotation(tree, source, pos, node)) {
+    true;
+  } else if (cursor_in_enum_constructor_tuple(tree, source, pos, node)) {
+    true;
+  } else if (Slot_predicates.suppresses_type_reference(
+               tree,
+               source,
+               pos,
+               node,
+             )) {
+    false;
+  } else {
+    let constructor_tuple_kinds = [
+      Kind.data_constructor_tuple,
+      Kind.incomplete_data_constructor_tuple,
+    ];
+    let type_node_kinds =
+      constructor_tuple_kinds
+      @ [
+        Kind.type_parameters,
+        Kind.type_alias,
+        Kind.tuple_type,
+        Kind.parenthesized_type,
+        Kind.arrow_type,
+        Kind.qualified_type_identifier,
+      ];
+    let in_type_node = n =>
+      if (Util.node_kind_in(n, type_node_kinds)) {
+        true;
+      } else if (Tree.node_kind(n) == Kind.type_variable) {
+        Option.is_some(
+          Util.ancestor_of_kinds(node, constructor_tuple_kinds),
+        );
+      } else {
+        false;
+      };
+    switch (Tree.ancestor(node, in_type_node)) {
+    | None => false
+    | Some(type_node) =>
+      let kind = Tree.node_kind(type_node);
+      if (Util.node_kind_in(type_node, constructor_tuple_kinds)) {
+        switch (Tree.node_parent(type_node)) {
+        | Some(parent) when Tree.node_kind(parent) == Kind.enum_variant =>
+          true
+        | _ => false
+        };
+      } else if (kind == Kind.enum_variant) {
+        Tree.cursor_inside(pos, type_node);
+      } else if (kind == Kind.qualified_type_identifier) {
+        switch (Tree.node_parent(type_node)) {
+        | None => false
+        | Some(parent) =>
+          Util.node_kind_in(
+            parent,
+            constructor_tuple_kinds
+            @ [Kind.type_parameters, Kind.constructor_type],
+          )
+        };
+      } else {
+        Util.cursor_in_node_span(source, pos, type_node);
+      };
+    };
+  };
+
+let cursor_in_string_literal = (pos: position, node: Tree.node) => {
+  let in_string = n =>
+    Util.node_kind_in(
+      n,
+      [Kind.string, Kind.import_path_string, Kind.string_content],
+    );
+  switch (Tree.ancestor(node, in_string)) {
+  | Some(string_node) =>
+    let (end_row, end_col) = Tree.node_end_point(string_node);
+    let at_or_after_closing_quote =
+      pos.line > end_row || pos.line == end_row && pos.character >= end_col - 1;
+    if (at_or_after_closing_quote) {
+      false;
+    } else {
+      Util.cursor_in_node(pos, string_node);
+    };
+  | None => false
+  };
+};
+
+let in_match_pattern_context = (tree: parse_tree, pos: position, source, node) =>
+  Match_context.in_match_pattern_from_node(tree, source, pos, node)
+  || Match_context.tree_contains_match_pattern_cursor(
+       tree,
+       source,
+       pos,
+       Tree.root(tree),
+     );
+
+let import_context_kind = (tree, pos) =>
+  switch (Import_context.import_context_from_tree(tree, pos)) {
+  | Some((kind, _, _, _)) => kind
+  | None => InScope
+  };
+
+let context_fallback = (~check_include, tree, pos, cursor_byte, node) =>
+  switch (Util.ancestor_of_kind(node, Kind.use_expression)) {
+  | Some(_) => ImportPath
+  | None
+      when
+        check_include
+        && Option.is_some(
+             Util.ancestor_of_kind(node, Kind.include_declaration),
+           ) =>
+    import_context_kind(tree, pos)
+  | None =>
+    Calls.in_call_argument_label_position(tree, pos, cursor_byte, node)
+      ? CallArgument : InScope
+  };
 
 let rec detect_kind =
         (
@@ -29,75 +240,54 @@ let rec detect_kind =
           source,
           cursor_byte,
           node: Tree.node,
-        ) => {
-  let kind = Tree.node_kind(node);
-  switch (kind) {
-  | "use_expression"
-  | "include_declaration" => ImportPath
-  | "match_branch"
-  | "match_body"
-  | "match_expression" => PatternContext
-  | "qualified_identifier" =>
-    switch (member_access_qualifier(tree, node, cursor_byte)) {
-    | Some(qualifier) => MemberAccess(qualifier)
-    | None =>
-      switch (Tree.node_parent(node)) {
-      | None => InScope
-      | Some(parent) => detect_kind(tree, pos, source, cursor_byte, parent)
-      }
-    }
-  | "identifier"
-  | "upper_identifier" =>
-    switch (
-      Tree.ancestor(node, n => Tree.node_kind(n) == "qualified_identifier")
-    ) {
-    | Some(qualified) =>
-      switch (member_access_qualifier(tree, qualified, cursor_byte)) {
+        ) =>
+  if (cursor_in_string_literal(pos, node)) {
+    Suppressed;
+  } else if (Keyword_slots.Match_slot.cursor_at_when_keyword_slot(
+               tree,
+               source,
+               pos,
+               node,
+             )) {
+    MatchGuardKeyword;
+  } else if (Match_context.cursor_in_constructor_pattern_args(pos, node)) {
+    Suppressed;
+  } else if (Keyword_slots.Match_slot.cursor_in_when_guard_expression(
+               source,
+               pos,
+               node,
+             )) {
+    InScope;
+  } else if (in_match_pattern_context(tree, pos, source, node)) {
+    PatternContext;
+  } else if (cursor_in_type_reference(tree, source, pos, cursor_byte, node)) {
+    TypeReference;
+  } else {
+    let kind = Tree.node_kind(node);
+    if (kind == Kind.use_expression) {
+      ImportPath;
+    } else if (kind == Kind.include_declaration) {
+      import_context_kind(tree, pos);
+    } else if (kind == Kind.qualified_identifier) {
+      switch (Text.qualifier_from_node(tree, node, cursor_byte)) {
       | Some(qualifier) => MemberAccess(qualifier)
-      | None => detect_kind(tree, pos, source, cursor_byte, qualified)
-      }
-    | None =>
-      switch (Tree.ancestor(node, n => Tree.node_kind(n) == "use_expression")) {
-      | Some(_) => ImportPath
       | None =>
-        if (Calls.in_call_argument_label_position(
-              tree,
-              pos,
-              cursor_byte,
-              node,
-            )) {
-          CallArgument;
-        } else {
-          InScope;
+        switch (Tree.node_parent(node)) {
+        | None => InScope
+        | Some(parent) => detect_kind(tree, pos, source, cursor_byte, parent)
         }
-      }
-    }
-  | _ =>
-    switch (Tree.ancestor(node, n => Tree.node_kind(n) == "use_expression")) {
-    | Some(_) => ImportPath
-    | None =>
-      switch (
-        Tree.ancestor(node, n => Tree.node_kind(n) == "include_declaration")
-      ) {
-      | Some(_) => ImportPath
+      };
+    } else if (kind == Kind.identifier || kind == Kind.upper_identifier) {
+      switch (Util.ancestor_of_kind(node, Kind.qualified_identifier)) {
+      | Some(qualified) =>
+        switch (Text.qualifier_from_node(tree, qualified, cursor_byte)) {
+        | Some(qualifier) => MemberAccess(qualifier)
+        | None => detect_kind(tree, pos, source, cursor_byte, qualified)
+        }
       | None =>
-        switch (Tree.ancestor(node, n => Tree.node_kind(n) == "match_branch")) {
-        | Some(_) => PatternContext
-        | None =>
-          if (Match_context.in_match_body_from_node(pos, node)) {
-            PatternContext;
-          } else if (Calls.in_call_argument_label_position(
-                       tree,
-                       pos,
-                       cursor_byte,
-                       node,
-                     )) {
-            CallArgument;
-          } else {
-            InScope;
-          }
-        }
-      }
-    }
+        context_fallback(~check_include=false, tree, pos, cursor_byte, node)
+      };
+    } else {
+      context_fallback(~check_include=true, tree, pos, cursor_byte, node);
+    };
   };
-};

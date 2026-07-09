@@ -16,21 +16,18 @@ let is_relative_import = path =>
 
 let safe_readdir = dir =>
   try(Sys.readdir(dir) |> Array.to_list) {
-  | _ => []
+  | Sys_error(_) => []
   };
 
 let safe_is_directory = path =>
   try(Sys.is_directory(path)) {
-  | _ => false
+  | Sys_error(_) => false
   };
 
-let split_display_prefix = prefix =>
+let display_prefix_of = prefix =>
   switch (String.rindex_opt(prefix, '/')) {
-  | None => ("", prefix)
-  | Some(index) => (
-      String.sub(prefix, 0, index + 1),
-      String.sub(prefix, index + 1, String.length(prefix) - index - 1),
-    )
+  | None => ""
+  | Some(index) => String.sub(prefix, 0, index + 1)
   };
 
 let candidate_from_entry =
@@ -92,12 +89,7 @@ let candidates_from_dir =
 let local_path_candidates = (~context: Syntax.Types.t, ~base_dir) => {
   let prefix = context.prefix;
   let display_prefix =
-    if (is_relative_import(prefix)) {
-      let (display_prefix, _entry_prefix) = split_display_prefix(prefix);
-      display_prefix;
-    } else {
-      "./";
-    };
+    is_relative_import(prefix) ? display_prefix_of(prefix) : "./";
   let candidate_dir = Filepath.String.concat(base_dir, display_prefix);
   candidates_from_dir(
     ~context,
@@ -112,7 +104,7 @@ let search_path_candidates = (~context: Syntax.Types.t) => {
   if (is_relative_import(prefix)) {
     [];
   } else {
-    let (display_prefix, _entry_prefix) = split_display_prefix(prefix);
+    let display_prefix = display_prefix_of(prefix);
     Config.module_search_path()
     |> List.fold_left(
          (acc, base_dir) => {
@@ -149,13 +141,7 @@ let first_module_name_from_source = filename => {
       idx;
     } else {
       let c = line.[idx];
-      if (c >= 'A'
-          && c <= 'Z'
-          || c >= 'a'
-          && c <= 'z'
-          || c >= '0'
-          && c <= '9'
-          || c == '_') {
+      if (Syntax.Text.is_ident_char(c)) {
         module_name_end(line, idx + 1);
       } else {
         idx;

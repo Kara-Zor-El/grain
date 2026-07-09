@@ -22,80 +22,173 @@ let local_candidates = (request: Request.t) =>
     request.local_bindings,
   );
 
-let collect_candidates = (request: Request.t) => {
-  switch (request.context.kind) {
-  | DocblockContext =>
-    Sources.Docblock.docblock_attribute_candidates(~context=request.context)
-  | MemberAccess(qualifier) =>
-    switch (request.typed) {
-    | None => []
-    | Some({env}) =>
-      Sources.Member_access.module_candidates(
+let expression_start_expected_type = (request: Request.t) =>
+  switch (request.context.keyword_slot) {
+  | Some(ExpressionStart) => Request.expected_type(request)
+  | _ => None
+  };
+
+let keyword_candidates = (request: Request.t) =>
+  switch (request.context.keyword_slot) {
+  | None => []
+  | Some(slot) =>
+    let expected_type = expression_start_expected_type(request);
+    let env =
+      switch (request.typed) {
+      | Some({env}) => Some(env)
+      | None => None
+      };
+    Sources.Keywords.keyword_candidates(
+      ~context=request.context,
+      ~env?,
+      ~expected_type?,
+      slot,
+    );
+  };
+
+let let_header_candidates = (request: Request.t) =>
+  switch (request.context.keyword_slot) {
+  | Some(LetHeader) =>
+    (request.context.prefix == "" ? local_candidates(request) : [])
+    @ keyword_candidates(request)
+  | Some(LetAfterModifier) => local_candidates(request)
+  | _ => []
+  };
+
+let typed_candidates = (request: Request.t, make_candidates) =>
+  switch (request.typed) {
+  | None => []
+  | Some(typed) => make_candidates(typed)
+  };
+
+let type_reference_candidates = (request: Request.t) =>
+  switch (request.typed) {
+  | None =>
+    Sources.Typed_env.env_types(
+      ~context=request.context,
+      ~include_variants=true,
+      Env.initial_env,
+    )
+  | Some({env, module_names}) =>
+    switch (type_reference_qualifier(request)) {
+    | Some(qualifier) =>
+      Sources.Member_access.type_candidates(
         ~context=request.context,
         ~qualifier,
         env,
       )
-    }
-  | CallArgument =>
-    switch (request.typed) {
-    | None => []
-    | Some({env}) =>
-      Sources.Call_arguments.argument_candidates(
+    | None =>
+      Sources.Typed_env.env_types(
         ~context=request.context,
-        ~env,
-        ~callee_fallback=request.callee_fallback,
-        Request.application(request),
+        ~include_variants=true,
+        env,
       )
+      @ Sources.Typed_env.env_modules(
+          ~context=request.context,
+          ~sort_group=Sort_group.ModuleMember,
+          ~exclude_module_names=module_names,
+          env,
+        )
     }
-  | PatternContext =>
-    local_candidates(request)
-    @ (
-      switch (request.typed) {
-      | None => []
-      | Some({env}) =>
-        Sources.Typed_env.pattern_candidates(
-          ~context=request.context,
-          ~expected_type=?Request.expected_type(request),
-          env,
-        )
-      }
-    )
-  | ImportPath =>
-    local_candidates(request)
-    @ (
-      switch (request.typed) {
-      | None => []
-      | Some({env}) =>
-        Sources.Typed_env.import_path_candidates(
-          ~context=request.context,
-          env,
-        )
-      }
-    )
-  | ImportFilePath =>
-    Sources.Import_paths.file_path_candidates(
-      ~context=request.context,
-      ~uri=request.uri,
-    )
-  | ImportModuleName(import_path) =>
-    Sources.Import_paths.include_module_candidates(
-      ~context=request.context,
-      ~uri=request.uri,
-      ~import_path,
-    )
-  | KeywordContext
-  | InScope =>
-    local_candidates(request)
-    @ (
-      switch (request.typed) {
-      | None => []
-      | Some({env}) =>
-        Sources.Typed_env.in_scope_candidates(~context=request.context, env)
-      }
-    )
-    @ Sources.Keywords.keyword_candidates(~context=request.context)
   };
+
+let in_scope_candidates = (request: Request.t) => {
+  let expected_type = expression_start_expected_type(request);
+  let at_expression_start =
+    request.context.keyword_slot == Some(ExpressionStart);
+  let locals =
+    switch (at_expression_start, expected_type) {
+    | (true, Some(_)) => []
+    | _ => local_candidates(request)
+    };
+  let typed =
+    typed_candidates(request, ({env, module_names}) =>
+      if (at_expression_start) {
+        Sources.Typed_env.expression_start_candidates(
+          ~context=request.context,
+          ~expected_type?,
+          ~exclude_module_names=module_names,
+          env,
+        );
+      } else {
+        Sources.Typed_env.in_scope_candidates(
+          ~context=request.context,
+          ~exclude_module_names=module_names,
+          env,
+        );
+      }
+    );
+  locals @ typed @ keyword_candidates(request);
 };
+
+let collect_candidates = (request: Request.t) =>
+  switch (request.context.keyword_slot) {
+  | Some(LetHeader)
+  | Some(LetAfterModifier) => let_header_candidates(request)
+  | _ =>
+    switch (request.context.kind) {
+    | Suppressed => []
+    | DocblockContext =>
+      Sources.Docblock.docblock_attribute_candidates(~context=request.context)
+    | TypeReference => type_reference_candidates(request)
+    | MemberAccess(qualifier) =>
+      typed_candidates(request, ({env}) =>
+        Sources.Member_access.module_candidates(
+          ~context=request.context,
+          ~qualifier,
+          env,
+        )
+      )
+    | CallArgument =>
+      typed_candidates(request, ({env}) =>
+        Sources.Call_arguments.argument_candidates(
+          ~context=request.context,
+          ~env,
+          ~callee_fallback=request.callee_fallback,
+          Request.application(request),
+        )
+      )
+    | PatternContext =>
+      let expected_type = Request.expected_type(request);
+      let locals =
+        switch (expected_type) {
+        | Some(_) => []
+        | None => local_candidates(request)
+        };
+      locals
+      @ typed_candidates(request, ({env}) =>
+          Sources.Typed_env.pattern_candidates(
+            ~context=request.context,
+            ~expected_type?,
+            env,
+          )
+        )
+      @ keyword_candidates(request);
+    | MatchGuardKeyword => keyword_candidates(request)
+    | ImportPath =>
+      local_candidates(request)
+      @ typed_candidates(request, ({env, module_names}) =>
+          Sources.Typed_env.import_path_candidates(
+            ~context=request.context,
+            ~exclude_module_names=module_names,
+            env,
+          )
+        )
+      @ keyword_candidates(request)
+    | ImportFilePath =>
+      Sources.Import_paths.file_path_candidates(
+        ~context=request.context,
+        ~uri=request.uri,
+      )
+    | ImportModuleName(import_path) =>
+      Sources.Import_paths.include_module_candidates(
+        ~context=request.context,
+        ~uri=request.uri,
+        ~import_path,
+      )
+    | InScope => in_scope_candidates(request)
+    }
+  };
 
 let process =
     (
