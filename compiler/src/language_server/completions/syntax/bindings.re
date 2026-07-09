@@ -1,23 +1,32 @@
 open Types;
+open Grammar;
 
 let pattern_name = (tree: parse_tree, node: Tree.node) =>
-  switch (Tree.node_kind(node)) {
-  | "variable_pattern"
-  | "identifier"
-  | "upper_identifier" => Some(Tree.node_text(tree, node))
-  | _ => None
+  if (Util.node_kind_in(
+        node,
+        [Kind.variable_pattern, Kind.identifier, Kind.upper_identifier],
+      )) {
+    Some(Tree.node_text(tree, node));
+  } else {
+    None;
   };
 
 let binding_from_value_binding = (tree: parse_tree, node: Tree.node) =>
-  switch (Tree.node_child_by_field_name(node, "pattern")) {
+  switch (Tree.node_child_by_field_name(node, Field.pattern)) {
   | None => None
   | Some(pattern) => pattern_name(tree, pattern)
   };
 
 let binding_from_module = (tree: parse_tree, node: Tree.node) =>
-  switch (Tree.node_child_by_field_name(node, "name")) {
+  switch (Tree.node_child_by_field_name(node, Field.name)) {
   | None => None
   | Some(name_node) => Some(Tree.node_text(tree, name_node))
+  };
+
+let is_root_module_declaration = node =>
+  switch (Tree.node_parent(node)) {
+  | Some(parent) => Tree.node_kind(parent) == Kind.program
+  | None => false
   };
 
 let local_bindings_before =
@@ -32,13 +41,15 @@ let local_bindings_before =
         acc;
       } else {
         switch (Tree.node_kind(node)) {
-        | "value_binding" =>
+        | k when k == Kind.value_binding =>
           switch (binding_from_value_binding(tree, node)) {
           | Some(name) => [{name: name}, ...acc]
           | None => acc
           }
-        | "module_declaration"
-        | "module_header" =>
+        | k
+            when
+              k == Kind.module_declaration
+              && !is_root_module_declaration(node) =>
           switch (binding_from_module(tree, node)) {
           | Some(name) => [{name: name}, ...acc]
           | None => acc

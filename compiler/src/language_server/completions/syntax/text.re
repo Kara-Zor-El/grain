@@ -53,6 +53,68 @@ let is_ident_char = c =>
   && c <= 'z'
   || c == '_';
 
+let qualifier_before_dot_in_text = (text, cursor_offset) =>
+  if (!String.contains(text, '.')) {
+    None;
+  } else if (cursor_offset < 0 || cursor_offset > String.length(text)) {
+    None;
+  } else {
+    let before_cursor = String.sub(text, 0, cursor_offset);
+    switch (String.rindex_opt(before_cursor, '.')) {
+    | None => None
+    | Some(dot_index) =>
+      let qualifier = String.sub(text, 0, dot_index);
+      qualifier == "" ? None : Some(qualifier);
+    };
+  };
+
+let qualifier_from_node =
+    (tree: parse_tree, node: Tree.node, cursor_byte: int) =>
+  qualifier_before_dot_in_text(
+    Tree.node_text(tree, node),
+    cursor_byte - Tree.node_start_byte(node),
+  );
+
+let qualifier_from_line = (~require_module_name=true, source, pos: position) => {
+  let line = line_at(source, pos);
+  let character =
+    Edit.clamp(~min_value=0, ~max_value=String.length(line), pos.character);
+  let before_cursor = String.sub(line, 0, character);
+  let rec find_segment_start = idx =>
+    if (idx <= 0) {
+      0;
+    } else if (is_ident_char(before_cursor.[idx - 1])) {
+      find_segment_start(idx - 1);
+    } else {
+      idx;
+    };
+  let segment_start = find_segment_start(character);
+  if (segment_start <= 0 || before_cursor.[segment_start - 1] != '.') {
+    None;
+  } else {
+    let dot_index = segment_start - 1;
+    let rec find_start = idx =>
+      if (idx <= 0) {
+        0;
+      } else if (is_ident_char(before_cursor.[idx - 1])
+                 || before_cursor.[idx - 1] == '.') {
+        find_start(idx - 1);
+      } else {
+        idx;
+      };
+    let start = find_start(dot_index);
+    let qualifier = String.sub(before_cursor, start, dot_index - start);
+    if (String.length(qualifier) == 0) {
+      None;
+    } else if (require_module_name
+               && !(qualifier.[0] >= 'A' && qualifier.[0] <= 'Z')) {
+      None;
+    } else {
+      Some(qualifier);
+    };
+  };
+};
+
 let prefix_from_cursor = (source, pos: position) => {
   let line = line_at(source, pos);
   let character =
@@ -93,24 +155,6 @@ let prefix_from_doc_attribute = (source, pos: position) => {
       );
     } else {
       ("", character, character);
-    };
-  };
-};
-
-let member_access_qualifier_from_line = (source, pos: position) => {
-  let line = line_at(source, pos);
-  let character =
-    Edit.clamp(~min_value=0, ~max_value=String.length(line), pos.character);
-  let before_cursor = String.sub(line, 0, character);
-  switch (String.rindex_opt(before_cursor, '.')) {
-  | None => None
-  | Some(dot_index) =>
-    let qualifier = String.sub(before_cursor, 0, dot_index);
-    if (String.length(qualifier) == 0
-        || !(qualifier.[0] >= 'A' && qualifier.[0] <= 'Z')) {
-      None;
-    } else {
-      Some(qualifier);
     };
   };
 };

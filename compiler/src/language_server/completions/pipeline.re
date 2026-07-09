@@ -2,38 +2,48 @@ open Completion_types;
 
 let candidate_cap = 100;
 
-let rec insert_dedup_candidate = (candidate, candidates) =>
-  switch (candidates) {
-  | [] => [candidate]
-  | [head, ...rest]
-      when
-        (candidate.item.label, candidate.item.kind)
-        == (head.item.label, head.item.kind) => [
-      if (source_rank(candidate.source) < source_rank(head.source)) {
-        candidate;
-      } else {
-        head;
-      },
-      ...rest,
-    ]
-  | [head, ...rest] => [head, ...insert_dedup_candidate(candidate, rest)]
+let more_authoritative = (candidate, incumbent) =>
+  if (source_rank(candidate.source) < source_rank(incumbent.source)) {
+    candidate;
+  } else if (source_rank(candidate.source) == source_rank(incumbent.source)
+             && Relevance.compare(candidate.relevance, incumbent.relevance)
+             < 0) {
+    candidate;
+  } else {
+    incumbent;
   };
 
-let dedupe_candidates = candidates =>
-  List.fold_left(
-    (acc, candidate) => insert_dedup_candidate(candidate, acc),
-    [],
+let dedupe_candidates = candidates => {
+  let best = Hashtbl.create(256);
+  let order = ref([]);
+  List.iter(
+    candidate => {
+      let key = (candidate.item.label, candidate.item.kind);
+      switch (Hashtbl.find_opt(best, key)) {
+      | None =>
+        Hashtbl.add(best, key, candidate);
+        order := [key, ...order^];
+      | Some(incumbent) =>
+        Hashtbl.replace(best, key, more_authoritative(candidate, incumbent))
+      };
+    },
     candidates,
   );
+  List.rev_map(key => Hashtbl.find(best, key), order^);
+};
 
 let compare_candidate = (left, right) =>
-  switch (
-    Int.compare(
-      Sort_group.rank(left.sort_group),
-      Sort_group.rank(right.sort_group),
-    )
-  ) {
-  | 0 => String.compare(left.item.label, right.item.label)
+  switch (Relevance.compare(left.relevance, right.relevance)) {
+  | 0 =>
+    switch (
+      Int.compare(
+        Sort_group.rank(left.sort_group),
+        Sort_group.rank(right.sort_group),
+      )
+    ) {
+    | 0 => String.compare(left.item.label, right.item.label)
+    | cmp => cmp
+    }
   | cmp => cmp
   };
 

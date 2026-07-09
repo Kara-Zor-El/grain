@@ -9,29 +9,64 @@ let value_kind = desc =>
   | _ => Value
   };
 
-let env_values = (~context, env) =>
+let value_candidate = (~context, name, desc) =>
+  make_candidate(
+    ~source=Typedtree,
+    ~label=name,
+    ~kind=value_kind(desc),
+    ~detail=
+      Printtyp.string_of_value_description(~ident=Ident.create(name), desc),
+    ~sort_group=Sort_group.Typed,
+    ~context,
+    (),
+  );
+
+let env_values = (~context, ~keep=(_name, _desc) => true, env) =>
   Env.fold_values(
-    (name, _path, desc, acc) => {
-      [
-        make_candidate(
-          ~source=Typedtree,
-          ~label=name,
-          ~kind=value_kind(desc),
-          ~detail=
-            Printtyp.string_of_value_description(
-              ~ident=Ident.create(name),
-              desc,
-            ),
-          ~sort_group=Sort_group.Typed,
-          ~context,
-          (),
-        ),
-        ...acc,
-      ]
-    },
+    (name, _path, desc, acc) =>
+      keep(name, desc)
+        ? [value_candidate(~context, name, desc), ...acc] : acc,
     None,
     env,
     [],
+  );
+
+let value_matches_expected_type = (~env, ~expected_type, ty) =>
+  switch (expected_type) {
+  | None => true
+  | Some(expected_type) =>
+    try(
+      {
+        Ctype.unify(
+          env,
+          Ctype.instance(env, ty),
+          Ctype.instance(env, expected_type),
+        );
+        true;
+      }
+    ) {
+    | Ctype.Unify(_) => false
+    | exn =>
+      Trace.log(
+        "Completion typed_env value match failed: " ++ Printexc.to_string(exn),
+      );
+      false;
+    }
+  };
+
+let env_expression_start_values = (~context, ~expected_type=?, env) =>
+  env_values(
+    ~context,
+    ~keep=
+      (name, desc) =>
+        String.length(name) > 0
+        && Syntax.Text.is_ident_char(name.[0])
+        && value_matches_expected_type(
+             ~env,
+             ~expected_type,
+             desc.Types.val_type,
+           ),
+    env,
   );
 
 let type_kind = decl =>
@@ -42,11 +77,11 @@ let type_kind = decl =>
   | TDataVariant(_) => TypeParameter
   };
 
-let env_types = (~context, env) =>
+let env_types = (~context, ~include_variants=false, env) =>
   Env.fold_types(
     (name, _path, (decl, _descrs), acc) =>
       switch (decl.Types.type_kind) {
-      | TDataVariant(_) => acc
+      | TDataVariant(_) when !include_variants => acc
       | _ => [
           make_candidate(
             ~source=Typedtree,
@@ -69,54 +104,66 @@ let env_types = (~context, env) =>
     [],
   );
 
-let env_modules = (~context, ~sort_group=Sort_group.Typed, env) =>
+let env_modules =
+    (~context, ~sort_group=Sort_group.Typed, ~exclude_module_names=?, env) =>
   Env.fold_modules(
-    (name, _path, _decl, acc) => {
-      [
-        make_candidate(
-          ~source=Typedtree,
-          ~label=name,
-          ~kind=Module,
-          ~sort_group,
-          ~context,
-          (),
-        ),
-        ...acc,
-      ]
-    },
+    (name, _path, _decl, acc) =>
+      if (switch (exclude_module_names) {
+          | Some(excluded) =>
+            List.exists(excluded_name => excluded_name == name, excluded)
+          | None => false
+          }) {
+        acc;
+      } else {
+        [
+          make_candidate(
+            ~source=Typedtree,
+            ~label=name,
+            ~kind=Module,
+            ~sort_group,
+            ~context,
+            (),
+          ),
+          ...acc,
+        ];
+      },
     None,
     env,
     [],
   );
 
-let constructor_matches = (~env, ~expected_type, cstr) =>
+let result_matches_expected = (~env, ~expected_type, ~what, result_type) =>
   switch (expected_type) {
   | None => true
   | Some(expected_type) =>
-    try(Env.same_constr^(env, expected_type, cstr.Types.cstr_res)) {
+    try(Env.same_constr^(env, expected_type, result_type)) {
     | Not_found => false
     | exn =>
       Trace.log(
-        "Completion typed_env constructor match failed: "
+        "Completion typed_env "
+        ++ what
+        ++ " match failed: "
         ++ Printexc.to_string(exn),
       );
       false;
     }
   };
 
+let constructor_matches = (~env, ~expected_type, cstr) =>
+  result_matches_expected(
+    ~env,
+    ~expected_type,
+    ~what="constructor",
+    cstr.Types.cstr_res,
+  );
+
 let label_matches = (~env, ~expected_type, label) =>
-  switch (expected_type) {
-  | None => true
-  | Some(expected_type) =>
-    try(Env.same_constr^(env, expected_type, label.Types.lbl_res)) {
-    | Not_found => false
-    | exn =>
-      Trace.log(
-        "Completion typed_env label match failed: " ++ Printexc.to_string(exn),
-      );
-      false;
-    }
-  };
+  result_matches_expected(
+    ~env,
+    ~expected_type,
+    ~what="label",
+    label.Types.lbl_res,
+  );
 
 let env_constructors = (~context, ~expected_type=?, env) =>
   Env.fold_constructors(
@@ -166,16 +213,27 @@ let env_labels = (~context, ~expected_type=?, env) =>
     [],
   );
 
-let in_scope_candidates = (~context, env) =>
+let in_scope_candidates = (~context, ~exclude_module_names=?, env) =>
   env_values(~context, env)
   @ env_types(~context, env)
-  @ env_modules(~context, env)
+  @ env_modules(~context, ~exclude_module_names?, env)
   @ env_constructors(~context, env)
   @ env_labels(~context, env);
+
+let expression_start_candidates =
+    (~context, ~expected_type=?, ~exclude_module_names=?, env) =>
+  env_expression_start_values(~context, ~expected_type?, env)
+  @ env_constructors(~context, ~expected_type?, env)
+  @ env_modules(~context, ~exclude_module_names?, env);
 
 let pattern_candidates = (~context, ~expected_type=?, env) =>
   env_constructors(~context, ~expected_type?, env)
   @ env_labels(~context, ~expected_type?, env);
 
-let import_path_candidates = (~context, env) =>
-  env_modules(~context, ~sort_group=Sort_group.Import, env);
+let import_path_candidates = (~context, ~exclude_module_names=?, env) =>
+  env_modules(
+    ~context,
+    ~sort_group=Sort_group.Import,
+    ~exclude_module_names?,
+    env,
+  );

@@ -9,12 +9,26 @@ let make_candidate =
       ~detail=?,
       ~sort_group: Sort_group.t,
       ~context: Syntax.Types.t,
+      ~relevance_boost=0,
       ~filter_text=?,
       ~insert_text=?,
+      ~insert_text_format=?,
+      ~command=?,
+      ~sort_label=?,
       ~tags=?,
       (),
     ) => {
   let insert = Option.value(~default=label, insert_text);
+  let relevance =
+    Relevance.make(
+      ~source,
+      ~sort_group,
+      ~label,
+      ~filter_text?,
+      ~prefix=context.prefix,
+      ~boost=relevance_boost,
+      (),
+    );
   let text_edit = {
     let edit: Protocol.text_edit = {
       range: context.replace_range,
@@ -22,20 +36,27 @@ let make_candidate =
     };
     Some(edit);
   };
+  let sort_text =
+    switch (sort_label) {
+    | Some(sort_label) => "00_" ++ sort_label
+    | None => Relevance.to_sort_text(~relevance, ~label)
+    };
   let item = {
     label,
     kind,
     detail,
-    sort_text: Sort_group.to_sort_text(~group=sort_group, label),
+    sort_text,
     filter_text,
     insert_text: None,
-    insert_text_format: None,
+    insert_text_format,
     text_edit,
+    command,
     tags,
   };
   {
     item,
     source,
     sort_group,
+    relevance,
   };
 };
