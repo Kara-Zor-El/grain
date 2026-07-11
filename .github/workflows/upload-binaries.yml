@@ -34,7 +34,6 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           token: ${{ secrets.UPLOAD_TOKEN }}
-          submodules: true
 
       - name: Tag commit as ${{ inputs.tag }}
         run: |
