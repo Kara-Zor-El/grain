@@ -54,8 +54,9 @@ depends: [
   "mdx" { with-dev-setup & >= "2.3.0" & os != "win32" }
   "menhir" { with-dev-setup & os != "win32" }
   "ocamlfind" { with-dev-setup & os != "win32" }
-  "odoc" { with-dev-setup & >= "2.4.0" & os != "win32" }
+  "odoc" { with-dev-setup & >= "3.2.0" & os != "win32" }
   "ppx_expect" { with-dev-setup & >= "v0.17" & os != "win32" }
+  "ppx_optcomp" {with-dev-setup}
   "spawn" { with-dev-setup }
   "ppx_inline_test" { with-dev-setup & os != "win32" }
   "ppxlib" { with-dev-setup & >= "0.37.0" & os != "win32" }
@@ -69,10 +70,10 @@ depends: [
 ]
 url {
   src:
-    "https://github.com/ocaml/dune/releases/download/3.23.1/dune-3.23.1.tbz"
+    "https://github.com/ocaml/dune/releases/download/3.24.0/dune-3.24.0.tbz"
   checksum: [
-    "sha256=93b4e7157f6ba8feb61cfc5f86008efd2c59037ba78a017d92b4abf30632348f"
-    "sha512=e5566bedc651292ae54d47ba1cdbcfff48962012c1436d0f9ece49a71aa10a674affc092058b0edee56ab2a2405c545b78fde1c472c0b4704c8f58570a2f46cd"
+    "sha256=501f73727a939aa954dc0537e37792a1ba189e61719c81dc367e2594fe016034"
+    "sha512=cd0a366d38ffb65f45c4c92059713190bdd7359c94f0da9c75c08e3acbd505d3852b881b0be1fc060ca2ce70e9425c1447d62560de0cf768b7ec6f9370fa3491"
   ]
 }
-x-commit-hash: "6f6eee69eda59e355bae2ca4e3ad1af678271883"
+x-commit-hash: "47f64de764078db6edb2698958b5270a17bffb05"

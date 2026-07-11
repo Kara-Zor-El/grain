@@ -20,8 +20,6 @@
     "build": "esy",
     "postbuild": "esy copy:exe",
     "build:js": "esy build:js",
-    "build:tree-sitter-wasm": "npm run build:wasm --prefix ../../grain-tree-sitter.ml",
-    "prebuild:js": "npm run build:tree-sitter-wasm",
     "postbuild:js": "esy copy:js",
     "pretest": "npm run build",
     "test": "esy test",
