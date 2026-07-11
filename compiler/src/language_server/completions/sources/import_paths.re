@@ -14,16 +14,6 @@ let is_relative_import = path =>
   String.starts_with(~prefix="./", path)
   || String.starts_with(~prefix="../", path);
 
-let safe_readdir = dir =>
-  try(Sys.readdir(dir) |> Array.to_list) {
-  | Sys_error(_) => []
-  };
-
-let safe_is_directory = path =>
-  try(Sys.is_directory(path)) {
-  | Sys_error(_) => false
-  };
-
 let display_prefix_of = prefix =>
   switch (String.rindex_opt(prefix, '/')) {
   | None => ""
@@ -33,7 +23,7 @@ let display_prefix_of = prefix =>
 let candidate_from_entry =
     (~context, ~base_dir, ~display_prefix, ~entry, ~strip_extension) => {
   let full_path = Filepath.String.concat(base_dir, entry);
-  if (safe_is_directory(full_path)) {
+  if (Utils.safe_is_directory(full_path)) {
     Some(
       make_candidate(
         ~source=Filesystem,
@@ -63,7 +53,7 @@ let candidate_from_entry =
 
 let candidates_from_dir =
     (~context, ~base_dir, ~display_prefix, ~strip_extension) =>
-  safe_readdir(base_dir)
+  Utils.safe_readdir(base_dir)
   |> List.fold_left(
        (acc, entry) =>
          // skip hidden entries
@@ -195,7 +185,7 @@ let source_file_for_import = (~base_dir, import_path) => {
       let path =
         Filename.is_relative(path)
           ? Filepath.String.concat(base_dir, path) : path;
-      Sys.file_exists(path) && !safe_is_directory(path);
+      Sys.file_exists(path) && !Utils.safe_is_directory(path);
     },
     with_extension,
   )
