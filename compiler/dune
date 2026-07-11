@@ -28,4 +28,4 @@
     --disable
     use-js-string))))
 
-(data_only_dirs node_modules vendor)
+(data_only_dirs node_modules)
