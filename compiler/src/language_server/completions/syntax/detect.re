@@ -218,9 +218,86 @@ let import_context_kind = (tree, pos) =>
   | None => InScope
   };
 
+let use_qualifier = (tree: parse_tree, use_expr: Tree.node) => {
+  let count = Tree.node_named_child_count(use_expr);
+  let rec loop = (idx, acc) =>
+    if (idx >= count) {
+      List.rev(acc);
+    } else {
+      switch (Tree.node_named_child(use_expr, idx)) {
+      | Some(child) when Tree.node_kind(child) == Kind.upper_identifier =>
+        loop(idx + 1, [Tree.node_text(tree, child), ...acc])
+      | _ => loop(idx + 1, acc)
+      };
+    };
+  switch (loop(0, [])) {
+  | [] => None
+  | parts => Some(String.concat(".", parts))
+  };
+};
+
+let use_item_slot = (source, pos: position) => {
+  let line = Text.line_at(source, pos);
+  let (_word, word_start, _word_end) = Text.prefix_from_cursor(source, pos);
+  let before = String.sub(line, 0, word_start);
+  let delimiter_index =
+    switch (String.rindex_opt(before, '{'), String.rindex_opt(before, ',')) {
+    | (Some(a), Some(b)) => Some(max(a, b))
+    | (Some(a), None) => Some(a)
+    | (None, Some(b)) => Some(b)
+    | (None, None) => None
+    };
+  let region =
+    switch (delimiter_index) {
+    | Some(idx) =>
+      String.sub(before, idx + 1, String.length(before) - idx - 1)
+    | None => before
+    };
+  switch (String.trim(region)) {
+  | "type" => UseType
+  | "module" => UseModule
+  | "exception" => UseException
+  | _ => UsePlain
+  };
+};
+
+let cursor_inside_use_shape =
+    (source, pos: position, use_expr: Tree.node, node) =>
+  switch (Tree.node_or_ancestor(node, Kind.use_shape)) {
+  | Some(_) => true
+  | None =>
+    let start_byte = Tree.node_start_byte(use_expr);
+    let cursor_byte = Text.byte_offset(source, pos);
+    if (cursor_byte <= start_byte) {
+      false;
+    } else {
+      let text = String.sub(source, start_byte, cursor_byte - start_byte);
+      String.contains(text, '{');
+    };
+  };
+
+let use_items_context = (tree: parse_tree, source, pos: position, node) =>
+  switch (Tree.node_or_ancestor(node, Kind.use_expression)) {
+  | None => None
+  | Some(use_expr) =>
+    if (!cursor_inside_use_shape(source, pos, use_expr, node)) {
+      None;
+    } else {
+      switch (use_qualifier(tree, use_expr)) {
+      | None => None
+      | Some(qualifier) =>
+        Some(UseItems(qualifier, use_item_slot(source, pos)))
+      };
+    }
+  };
+
 let context_fallback = (~check_include, tree, pos, cursor_byte, node) =>
-  switch (Util.ancestor_of_kind(node, Kind.use_expression)) {
-  | Some(_) => ImportPath
+  switch (Tree.node_or_ancestor(node, Kind.use_expression)) {
+  | Some(_) =>
+    switch (use_items_context(tree, Tree.source(tree), pos, node)) {
+    | Some(kind) => kind
+    | None => ImportPath
+    }
   | None
       when
         check_include
@@ -265,7 +342,10 @@ let rec detect_kind =
   } else {
     let kind = Tree.node_kind(node);
     if (kind == Kind.use_expression) {
-      ImportPath;
+      switch (use_items_context(tree, source, pos, node)) {
+      | Some(kind) => kind
+      | None => ImportPath
+      };
     } else if (kind == Kind.include_declaration) {
       import_context_kind(tree, pos);
     } else if (kind == Kind.qualified_identifier) {

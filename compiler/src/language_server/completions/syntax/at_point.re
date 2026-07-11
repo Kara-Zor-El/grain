@@ -118,6 +118,7 @@ let resolve_keyword_slot = (tree: parse_tree, source, pos: position, kind) => {
   let keyword_slot =
     switch (kind) {
     | Suppressed => None
+    | UseItems(_, _) => None
     | MatchGuardKeyword => Some(MatchGuard)
     | _ => Keyword_slot.resolve(tree, pos, source)
     };

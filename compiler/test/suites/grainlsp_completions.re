@@ -932,4 +932,102 @@ provide type rec
     expect.bool(string_contains(result, {|"label":"rec"|})).toBe(false);
     expect.int(code).toBe(0);
   });
+
+  test_or_skip("completion_use_items_plain", ({expect}) => {
+    let code_uri = "file:///a.gr";
+    let code = {|module A
+from "char" include Char
+use Char.{  }
+|};
+    let (setup_request, teardown_request) =
+      lsp_setup_teardown_requests(code_uri, code);
+    let request =
+      lsp_input(
+        "textDocument/completion",
+        lsp_text_document_position(code_uri, 2, 11),
+      );
+    let (result, code) =
+      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
+
+    expect.bool(string_contains(result, {|"label":"code"|})).toBe(true);
+    expect.bool(string_contains(result, {|"label":"type Encoding"|})).toBe(
+      true,
+    );
+    expect.bool(string_contains(result, {|"label":"module Ascii"|})).toBe(
+      true,
+    );
+    expect.bool(string_contains(result, {|"label":"type"|})).toBe(false);
+    expect.int(code).toBe(0);
+  });
+
+  test_or_skip("completion_use_items_type_keyword", ({expect}) => {
+    let code_uri = "file:///a.gr";
+    let code = {|module A
+from "char" include Char
+use Char.{ type Encoding }
+|};
+    let (setup_request, teardown_request) =
+      lsp_setup_teardown_requests(code_uri, code);
+    let request =
+      lsp_input(
+        "textDocument/completion",
+        lsp_text_document_position(code_uri, 2, 19),
+      );
+    let (result, code) =
+      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
+
+    expect.bool(string_contains(result, {|"label":"Encoding"|})).toBe(true);
+    expect.bool(string_contains(result, {|"label":"type Encoding"|})).toBe(
+      false,
+    );
+    expect.bool(string_contains(result, {|"label":"code"|})).toBe(false);
+    expect.int(code).toBe(0);
+  });
+
+  test_or_skip("completion_use_items_module_keyword", ({expect}) => {
+    let code_uri = "file:///a.gr";
+    let code = {|module A
+from "char" include Char
+use Char.{ module Ascii }
+|};
+    let (setup_request, teardown_request) =
+      lsp_setup_teardown_requests(code_uri, code);
+    let request =
+      lsp_input(
+        "textDocument/completion",
+        lsp_text_document_position(code_uri, 2, 20),
+      );
+    let (result, code) =
+      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
+
+    expect.bool(string_contains(result, {|"label":"Ascii"|})).toBe(true);
+    expect.bool(string_contains(result, {|"label":"module Ascii"|})).toBe(
+      false,
+    );
+    expect.bool(string_contains(result, {|"label":"code"|})).toBe(false);
+    expect.int(code).toBe(0);
+  });
+
+  test_or_skip("completion_use_module_name_before_brackets", ({expect}) => {
+    let code_uri = "file:///a.gr";
+    let code = {|module A
+from "char" include Char
+use Char.{  }
+|};
+    let (setup_request, teardown_request) =
+      lsp_setup_teardown_requests(code_uri, code);
+    let request =
+      lsp_input(
+        "textDocument/completion",
+        lsp_text_document_position(code_uri, 2, 6),
+      );
+    let (result, code) =
+      lsp(setup_request ++ lsp_request(request) ++ teardown_request);
+
+    expect.bool(string_contains(result, {|"label":"Char"|})).toBe(true);
+    expect.bool(string_contains(result, {|"label":"type Encoding"|})).toBe(
+      false,
+    );
+    expect.int(code).toBe(0);
+  });
 });

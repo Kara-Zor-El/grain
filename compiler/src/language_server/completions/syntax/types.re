@@ -20,12 +20,19 @@ type keyword_slot =
   | IfTail
   | RecordFieldHeader;
 
+type use_item_slot =
+  | UsePlain
+  | UseType
+  | UseModule
+  | UseException;
+
 type context_kind =
   | InScope
   | MemberAccess(string)
   | ImportPath
   | ImportFilePath
   | ImportModuleName(string)
+  | UseItems(string, use_item_slot)
   | PatternContext
   | MatchGuardKeyword
   | DocblockContext
