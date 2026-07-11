@@ -186,6 +186,15 @@ let collect_candidates = (request: Request.t) =>
         ~uri=request.uri,
         ~import_path,
       )
+    | UseItems(qualifier, slot) =>
+      typed_candidates(request, ({env}) =>
+        Sources.Member_access.use_item_candidates(
+          ~context=request.context,
+          ~qualifier,
+          ~slot,
+          env,
+        )
+      )
     | InScope => in_scope_candidates(request)
     }
   };
