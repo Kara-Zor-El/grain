@@ -91,7 +91,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ needs.release-please.outputs.tag-name }}
-          submodules: true
 
       # Many of these steps are the same as building the compiler for tests
       - name: Setup Node.js

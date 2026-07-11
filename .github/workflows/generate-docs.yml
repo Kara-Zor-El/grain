@@ -30,7 +30,6 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           token: ${{ secrets.PUSH_TOKEN }}
-          submodules: true
 
       - name: Fetch linux binary
         uses: actions/download-artifact@v4
