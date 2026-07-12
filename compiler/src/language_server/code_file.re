@@ -86,19 +86,15 @@ let replace_line_range = (source, range: Protocol.range, replacement) => {
   };
 };
 
-let message_contains = (needle, haystack) => {
-  let needle_len = String.length(needle);
-  let haystack_len = String.length(haystack);
-  let rec loop = idx =>
-    if (idx + needle_len > haystack_len) {
-      false;
-    } else if (String.sub(haystack, idx, needle_len) == needle) {
+let message_contains = (needle, haystack) =>
+  try(
+    {
+      ignore(Str.search_forward(Str.regexp_string(needle), haystack, 0));
       true;
-    } else {
-      loop(idx + 1);
-    };
-  needle_len == 0 ? true : loop(0);
-};
+    }
+  ) {
+  | Not_found => false
+  };
 
 let recover_source_from_diagnostics = (source, errors) =>
   List.fold_left(
