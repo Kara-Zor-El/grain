@@ -71,8 +71,8 @@
     "@opam/rely": "reasonml/reason-native:rely.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
     "@opam/ocamlfind": "1.9.8",
     "@opam/num": "1.5",
-    "@grain/grain-tree-sitter.ml": "Kara-Zor-El/grain-tree-sitter.ml#cdba8f986673e601b1a7be5222b5c1ae53b8a27f",
-    "@grain/tree-sitter-grain": "Kara-Zor-El/tree-sitter-grain#8984254bf87fd5d64924f8cf4ad7dd2074989fd9"
+    "@grain/grain-tree-sitter.ml": "Kara-Zor-El/grain-tree-sitter.ml#862acfaade14446630bea9349ef0220a6eb5762d",
+    "@grain/tree-sitter-grain": "Kara-Zor-El/tree-sitter-grain#4ce736bbb1e1255d3210eb3c5c767dcadb240667"
   },
   "installConfig": {
     "pnp": false
