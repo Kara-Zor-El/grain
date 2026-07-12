@@ -1,3 +1,5 @@
+// This file takes the graindoc parser and looks for [@graindoc_attributes] to tell completions what graindoc attributes exists
+// See folders coresponding dune file for how the file is generated
 module Grammar =
   MenhirSdk.Cmly_read.Read({
     let filename = "graindoc_parser.cmly";
