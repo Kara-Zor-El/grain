@@ -2440,14 +2440,14 @@
         [ "windows", "x86_64" ]
       ]
     },
-    "@grain/grain-tree-sitter.ml@github:Kara-Zor-El/grain-tree-sitter.ml#cdba8f986673e601b1a7be5222b5c1ae53b8a27f@d41d8cd9": {
-      "id": "@grain/grain-tree-sitter.ml@github:Kara-Zor-El/grain-tree-sitter.ml#cdba8f986673e601b1a7be5222b5c1ae53b8a27f@d41d8cd9",
+    "@grain/grain-tree-sitter.ml@github:Kara-Zor-El/grain-tree-sitter.ml#862acfaade14446630bea9349ef0220a6eb5762d@d41d8cd9": {
+      "id": "@grain/grain-tree-sitter.ml@github:Kara-Zor-El/grain-tree-sitter.ml#862acfaade14446630bea9349ef0220a6eb5762d@d41d8cd9",
       "name": "@grain/grain-tree-sitter.ml",
-      "version": "github:Kara-Zor-El/grain-tree-sitter.ml#cdba8f986673e601b1a7be5222b5c1ae53b8a27f",
+      "version": "github:Kara-Zor-El/grain-tree-sitter.ml#862acfaade14446630bea9349ef0220a6eb5762d",
       "source": {
         "type": "install",
         "source": [
-          "github:Kara-Zor-El/grain-tree-sitter.ml#cdba8f986673e601b1a7be5222b5c1ae53b8a27f"
+          "github:Kara-Zor-El/grain-tree-sitter.ml#862acfaade14446630bea9349ef0220a6eb5762d"
         ]
       },
       "overrides": [],
@@ -2455,7 +2455,7 @@
         "ocaml@5.2.0@d41d8cd9", "@opam/tree-sitter@opam:0.1.0@e4edd63a",
         "@opam/reason@opam:3.15.0@b096e175",
         "@opam/dune@opam:3.24.0@033f8287",
-        "@grain/tree-sitter-grain@github:Kara-Zor-El/tree-sitter-grain#8984254bf87fd5d64924f8cf4ad7dd2074989fd9@d41d8cd9"
+        "@grain/tree-sitter-grain@github:Kara-Zor-El/tree-sitter-grain#4ce736bbb1e1255d3210eb3c5c767dcadb240667@d41d8cd9"
       ],
       "devDependencies": [],
       "installConfig": { "pnp": false },
