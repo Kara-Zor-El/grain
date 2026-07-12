@@ -123,6 +123,7 @@ let in_scope_candidates = (request: Request.t) => {
 
 let collect_candidates = (request: Request.t) =>
   switch (request.context.keyword_slot) {
+  | Some(AliasKeyword) => keyword_candidates(request)
   | Some(LetHeader)
   | Some(LetAfterModifier) => let_header_candidates(request)
   | _ =>

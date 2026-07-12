@@ -6,19 +6,7 @@ type parse_tree = Grain_tree_sitter.parse_tree;
 
 type local_binding = {name: string};
 
-type keyword_slot =
-  | ToplevelStatement
-  | LetHeader
-  | LetAfterModifier
-  | BlockStatement
-  | LoopBody
-  | ExpressionStart
-  | ImportIncludeTail
-  | ProvideTail
-  | ProvideTypeTail
-  | MatchGuard
-  | IfTail
-  | RecordFieldHeader;
+include Grain_parsing.Keyword_slot;
 
 type use_item_slot =
   | UsePlain
