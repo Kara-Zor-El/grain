@@ -115,12 +115,18 @@ let resolve_kind = (tree: parse_tree, source, pos: position, import_context) => 
 };
 
 let resolve_keyword_slot = (tree: parse_tree, source, pos: position, kind) => {
+  let node = Util.node_at_cursor(tree, pos);
+  let alias = Keyword_slots.Aliases.alias_slot(tree, source, pos, node);
   let keyword_slot =
-    switch (kind) {
-    | Suppressed => None
-    | UseItems(_, _) => None
-    | MatchGuardKeyword => Some(MatchGuard)
-    | _ => Keyword_slot.resolve(tree, pos, source)
+    switch (alias) {
+    | Some(_) => alias
+    | None =>
+      switch (kind) {
+      | Suppressed => None
+      | UseItems(_, _) => None
+      | MatchGuardKeyword => Some(MatchGuard)
+      | _ => Keyword_slot.resolve(tree, pos, source)
+      }
     };
   switch (keyword_slot, kind) {
   | (None, InScope) when expression_start_after_delimiter(source, pos) =>

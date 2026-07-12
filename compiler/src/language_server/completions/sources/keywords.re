@@ -1,3 +1,4 @@
+open Grain_parsing;
 open Grain_typed;
 open Completion_types;
 open Completion_types.ResponseResult;
@@ -10,293 +11,29 @@ type keyword_entry = {
   sort_label: option(string),
 };
 
-let is_word_keyword = label =>
-  String.length(label) > 0
-  && String.for_all(Syntax.Text.is_ident_char, label);
+let entry_metadata = (slot: keyword_slot, label) =>
+  switch (slot, label) {
+  | (ToplevelStatement, "from") => {
+      label,
+      snippet: Some("from \"$1\" include $2"),
+      sort_label: None,
+    }
+  | (ImportIncludeTail, "include") => {
+      label,
+      snippet: None,
+      sort_label: Some("include"),
+    }
+  | (_, _) => {
+      label,
+      snippet: None,
+      sort_label: None,
+    }
+  };
 
-let toplevel_keywords = [
-  {
-    label: "from",
-    snippet: Some("from \"$1\" include $2"),
-    sort_label: None,
-  },
-  {
-    label: "let",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "provide",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "module",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "foreign",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "primitive",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "exception",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "enum",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "record",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "type",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "include",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "if",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "match",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "while",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "for",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "assert",
-    snippet: None,
-    sort_label: None,
-  },
-];
-
-let let_header_keywords = [
-  {
-    label: "rec",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "mut",
-    snippet: None,
-    sort_label: None,
-  },
-];
-
-let block_statement_keywords = [
-  {
-    label: "let",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "return",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "if",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "match",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "while",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "for",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "assert",
-    snippet: None,
-    sort_label: None,
-  },
-];
-
-let loop_body_keywords = [
-  {
-    label: "break",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "continue",
-    snippet: None,
-    sort_label: None,
-  },
-  ...block_statement_keywords,
-];
-
-let expression_start_keywords = [
-  {
-    label: "if",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "match",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "while",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "for",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "assert",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "let",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "true",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "false",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "void",
-    snippet: None,
-    sort_label: None,
-  },
-];
-
-let import_include_keywords = [
-  {
-    label: "include",
-    snippet: None,
-    sort_label: Some("include"),
-  },
-];
-
-let provide_tail_keywords = [
-  {
-    label: "foreign",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "primitive",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "exception",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "enum",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "record",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "type",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "module",
-    snippet: None,
-    sort_label: None,
-  },
-  {
-    label: "let",
-    snippet: None,
-    sort_label: None,
-  },
-];
-
-let match_guard_keywords = [
-  {
-    label: "when",
-    snippet: None,
-    sort_label: None,
-  },
-];
-let if_tail_keywords = [
-  {
-    label: "else",
-    snippet: None,
-    sort_label: None,
-  },
-];
-let record_field_keywords = [
-  {
-    label: "mut",
-    snippet: None,
-    sort_label: None,
-  },
-];
-
-let keywords_for_slot =
-  fun
-  | ToplevelStatement => toplevel_keywords
-  | LetHeader => let_header_keywords
-  | LetAfterModifier => []
-  | BlockStatement => block_statement_keywords
-  | LoopBody => loop_body_keywords
-  | ExpressionStart => expression_start_keywords
-  | ImportIncludeTail => import_include_keywords
-  | ProvideTail => provide_tail_keywords
-  | ProvideTypeTail => []
-  | MatchGuard => match_guard_keywords
-  | IfTail => if_tail_keywords
-  | RecordFieldHeader => record_field_keywords;
+let keywords_for_slot = (slot: keyword_slot) =>
+  Keywords.all
+  |> List.filter(label => List.mem(slot, Keywords.slots_for(label)))
+  |> List.map(label => entry_metadata(slot, label));
 
 let expected_matches_path = (~env, expected_type, path) =>
   switch (Ctype.expand_head(env, expected_type).desc) {
@@ -326,7 +63,6 @@ let keyword_matches_expected_type = (~env, ~expected_type, label) =>
 let keyword_candidates =
     (~context, ~env=?, ~expected_type=?, slot: keyword_slot) => {
   keywords_for_slot(slot)
-  |> List.filter(entry => is_word_keyword(entry.label))
   |> List.filter(entry =>
        keyword_matches_expected_type(~env, ~expected_type, entry.label)
      )
