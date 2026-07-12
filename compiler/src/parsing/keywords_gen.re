@@ -1,3 +1,5 @@
+// This file takes the parser and looks for [@keyword] to tell completions what keyword slots exists and what context they should appear in
+// See folders coresponding dune file for how the file is generated
 module Grammar =
   MenhirSdk.Cmly_read.Read({
     let filename = "parser.cmly";
