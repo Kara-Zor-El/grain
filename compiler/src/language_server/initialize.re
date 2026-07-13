@@ -78,6 +78,8 @@ module ResponseResult = {
 
   [@deriving yojson]
   type lsp_capabilities = {
+    [@key "positionEncoding"]
+    position_encoding: string,
     [@key "documentFormattingProvider"]
     document_formatting_provider: bool,
     [@key "textDocumentSync"]
@@ -111,6 +113,7 @@ module ResponseResult = {
   type t = {capabilities: lsp_capabilities};
 
   let capabilities = {
+    position_encoding: "utf-8",
     document_formatting_provider: true,
     text_document_sync: Full,
     hover_provider: true,
