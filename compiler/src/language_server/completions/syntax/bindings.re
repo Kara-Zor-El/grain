@@ -29,11 +29,35 @@ let is_root_module_declaration = node =>
   | None => false
   };
 
+let has_named_child_of_kind = (node, kind) => {
+  let count = Tree.node_named_child_count(node);
+  let rec loop = idx =>
+    if (idx >= count) {
+      false;
+    } else {
+      switch (Tree.node_named_child(node, idx)) {
+      | Some(child) when Tree.node_kind(child) == kind => true
+      | _ => loop(idx + 1)
+      };
+    };
+  loop(0);
+};
+
+let is_module_scope = node => {
+  let kind = Tree.node_kind(node);
+  kind == Kind.module_declaration
+  || kind == Kind.provide_declaration
+  && has_named_child_of_kind(node, Kind.upper_identifier);
+};
+
 let local_bindings_before =
     (tree: parse_tree, pos: position): list(local_binding) => {
   let source = Tree.source(tree);
   let cursor_byte = Text.byte_offset(source, pos);
   let root = Tree.root(tree);
+  let node_contains_cursor = node =>
+    Tree.node_start_byte(node) <= cursor_byte
+    && cursor_byte <= Tree.node_end_byte(node);
   let rec collect =
           (tree, node: Tree.node, cursor_byte, acc: list(local_binding)) => {
     let acc =
@@ -57,18 +81,23 @@ let local_bindings_before =
         | _ => acc
         };
       };
-    let count = Tree.node_named_child_count(node);
-    let rec loop = (idx, acc) =>
-      if (idx >= count) {
-        acc;
-      } else {
-        switch (Tree.node_named_child(node, idx)) {
-        | None => loop(idx + 1, acc)
-        | Some(child) =>
-          loop(idx + 1, collect(tree, child, cursor_byte, acc))
+    // If the cursor is not inside the module's scope, skip it to avoid offering its bindings
+    if (is_module_scope(node) && !node_contains_cursor(node)) {
+      acc;
+    } else {
+      let count = Tree.node_named_child_count(node);
+      let rec loop = (idx, acc) =>
+        if (idx >= count) {
+          acc;
+        } else {
+          switch (Tree.node_named_child(node, idx)) {
+          | None => loop(idx + 1, acc)
+          | Some(child) =>
+            loop(idx + 1, collect(tree, child, cursor_byte, acc))
+          };
         };
-      };
-    loop(0, acc);
+      loop(0, acc);
+    };
   };
   collect(tree, root, cursor_byte, []);
 };
