@@ -215,7 +215,6 @@ let env_labels = (~context, ~expected_type=?, env) =>
 
 let in_scope_candidates = (~context, ~exclude_module_names=?, env) =>
   env_values(~context, env)
-  @ env_types(~context, env)
   @ env_modules(~context, ~exclude_module_names?, env)
   @ env_constructors(~context, env)
   @ env_labels(~context, env);
