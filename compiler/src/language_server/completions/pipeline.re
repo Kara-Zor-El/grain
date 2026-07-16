@@ -18,7 +18,8 @@ let dedupe_candidates = candidates => {
   let order = ref([]);
   List.iter(
     candidate => {
-      let key = (candidate.item.label, candidate.item.kind);
+      // FIXME: Due to obtaining candidates from both tree-sitter and typed env, the same label may have 2 different kinds (tree-sitter treats functions as variables currently)
+      let key = candidate.item.label;
       switch (Hashtbl.find_opt(best, key)) {
       | None =>
         Hashtbl.add(best, key, candidate);
