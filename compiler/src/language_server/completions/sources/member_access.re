@@ -106,7 +106,8 @@ let type_candidates = (~context, ~qualifier, env) =>
 
 let use_completion_kind = (kind: Modules.export_kind) =>
   switch (kind) {
-  | Modules.Function => Function
+  // Functions treated as values to avoid appending `()`
+  | Modules.Function => Value
   | Modules.Value => Value
   | Modules.Enum
   | Modules.Abstract => TypeParameter
