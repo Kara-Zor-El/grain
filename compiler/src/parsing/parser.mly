@@ -37,7 +37,7 @@ module Grain_parsing = struct end
 %token <string> PREFIX_150
 %token <string> INFIX_ASSIGNMENT_10
 
-%token ENUM [@keyword ToplevelStatement] [@keyword ProvideTail] RECORD [@keyword ToplevelStatement] [@keyword ProvideTail] TYPE [@keyword ToplevelStatement] [@keyword ProvideTail] MODULE [@keyword ToplevelStatement] [@keyword ProvideTail] INCLUDE [@keyword ToplevelStatement] [@keyword ImportIncludeTail] USE [@keyword] PROVIDE [@keyword ToplevelStatement] ABSTRACT [@keyword] FOREIGN [@keyword ToplevelStatement] [@keyword ProvideTail] WASM [@keyword] PRIMITIVE [@keyword ToplevelStatement] [@keyword ProvideTail]
+%token ENUM [@keyword ToplevelStatement] [@keyword ProvideTail] RECORD [@keyword ToplevelStatement] [@keyword ProvideTail] TYPE [@keyword ToplevelStatement] [@keyword ProvideTail] MODULE [@keyword ToplevelStatement] [@keyword ProvideTail] INCLUDE [@keyword ToplevelStatement] [@keyword ImportIncludeTail] USE [@keyword ToplevelStatement] [@keyword BlockStatement] [@keyword LoopBody] PROVIDE [@keyword ToplevelStatement] ABSTRACT [@keyword] FOREIGN [@keyword ToplevelStatement] [@keyword ProvideTail] WASM [@keyword] PRIMITIVE [@keyword ToplevelStatement] [@keyword ProvideTail]
 %token AND [@keyword]
 %token EXCEPT [@keyword] FROM [@keyword ToplevelStatement] STAR
 %token SLASH DASH PIPE

@@ -105,14 +105,27 @@ let env_types = (~context, ~include_variants=false, env) =>
   );
 
 let env_modules =
-    (~context, ~sort_group=Sort_group.Typed, ~exclude_module_names=?, env) =>
+    (
+      ~context,
+      ~sort_group=Sort_group.Typed,
+      ~exclude_module_names=?,
+      ~keep_module=?,
+      env,
+    ) =>
   Env.fold_modules(
-    (name, _path, _decl, acc) =>
-      if (switch (exclude_module_names) {
-          | Some(excluded) =>
-            List.exists(excluded_name => excluded_name == name, excluded)
-          | None => false
-          }) {
+    (name, _path, decl, acc) => {
+      let excluded =
+        switch (exclude_module_names) {
+        | Some(excluded) =>
+          List.exists(excluded_name => excluded_name == name, excluded)
+        | None => false
+        };
+      let kept =
+        switch (keep_module) {
+        | Some(keep) => keep(decl)
+        | None => true
+        };
+      if (excluded || !kept) {
         acc;
       } else {
         [
@@ -126,7 +139,8 @@ let env_modules =
           ),
           ...acc,
         ];
-      },
+      };
+    },
     None,
     env,
     [],
@@ -229,10 +243,12 @@ let pattern_candidates = (~context, ~expected_type=?, env) =>
   env_constructors(~context, ~expected_type?, env)
   @ env_labels(~context, ~expected_type?, env);
 
-let import_path_candidates = (~context, ~exclude_module_names=?, env) =>
+let import_path_candidates =
+    (~context, ~exclude_module_names=?, ~keep_module=?, env) =>
   env_modules(
     ~context,
     ~sort_group=Sort_group.Import,
     ~exclude_module_names?,
+    ~keep_module?,
     env,
   );

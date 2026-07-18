@@ -16,6 +16,17 @@ let send_completion = (~id: Protocol.message_id, ~is_incomplete, items) =>
     }),
   );
 
+let module_in_scope = (request: Request.t) => {
+  let filename = Utils.uri_to_filename(request.uri);
+  let pos: Protocol.position = {
+    line: request.position.line,
+    character: request.position.character,
+  };
+  (decl: Types.module_declaration) =>
+    decl.md_loc.loc_start.pos_fname != filename
+    || loc_ends_before_position(decl.md_loc, pos);
+};
+
 let local_candidates = (request: Request.t) =>
   Sources.Locals.local_candidates(
     ~context=request.context,
@@ -167,15 +178,22 @@ let collect_candidates = (request: Request.t) =>
       @ keyword_candidates(request);
     | MatchGuardKeyword => keyword_candidates(request)
     | ImportPath =>
-      local_candidates(request)
-      @ typed_candidates(request, ({env, module_names}) =>
-          Sources.Typed_env.import_path_candidates(
-            ~context=request.context,
-            ~exclude_module_names=module_names,
-            env,
-          )
+      typed_candidates(request, ({env, module_names}) =>
+        Sources.Typed_env.import_path_candidates(
+          ~context=request.context,
+          ~exclude_module_names=module_names,
+          ~keep_module=module_in_scope(request),
+          env,
         )
-      @ keyword_candidates(request)
+      )
+    | UseModulePath(qualifier) =>
+      typed_candidates(request, ({env}) =>
+        Sources.Member_access.use_path_candidates(
+          ~context=request.context,
+          ~qualifier,
+          env,
+        )
+      )
     | ImportFilePath =>
       Sources.Import_paths.file_path_candidates(
         ~context=request.context,
@@ -195,6 +213,10 @@ let collect_candidates = (request: Request.t) =>
           ~slot,
           env,
         )
+      )
+    | UseShape =>
+      Sources.Member_access.use_shape_snippet_candidate(
+        ~context=request.context,
       )
     | InScope => in_scope_candidates(request)
     }

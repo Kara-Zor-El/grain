@@ -21,6 +21,8 @@ type context_kind =
   | ImportFilePath
   | ImportModuleName(string)
   | UseItems(string, use_item_slot)
+  | UseModulePath(string)
+  | UseShape
   | PatternContext
   | MatchGuardKeyword
   | DocblockContext
