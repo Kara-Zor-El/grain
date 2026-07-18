@@ -276,6 +276,54 @@ let cursor_inside_use_shape =
     };
   };
 
+let char_before_cursor_is_dot = (source, pos: position) => {
+  let byte = Text.byte_offset(source, pos);
+  byte > 0 && source.[byte - 1] == '.';
+};
+
+let use_expression_ancestor = (tree: parse_tree, pos: position, node) =>
+  switch (Tree.node_or_ancestor(node, Kind.use_expression)) {
+  | Some(_) as found => found
+  | None =>
+    let source = Tree.source(tree);
+    let line = Text.line_at(source, pos);
+    let start_col = min(pos.character, String.length(line));
+    let rec last_token_col = col =>
+      if (col <= 0) {
+        None;
+      } else {
+        switch (line.[col - 1]) {
+        | ' '
+        | '\t' => last_token_col(col - 1)
+        | _ => Some(col - 1)
+        };
+      };
+    switch (last_token_col(start_col)) {
+    | None => None
+    | Some(col) =>
+      Option.bind(
+        Tree.node_at_point(
+          tree,
+          {
+            ...pos,
+            character: col,
+          },
+        ),
+        Tree.node_or_ancestor(_, Kind.use_expression),
+      )
+    };
+  };
+
+let cursor_after_use_dot = (tree: parse_tree, source, pos: position, node) => {
+  let use_expr = use_expression_ancestor(tree, pos, node);
+  switch (use_expr) {
+  | Some(use_expr) when !cursor_inside_use_shape(source, pos, use_expr, node) =>
+    Tree.node_end_point(use_expr) == (pos.line, pos.character)
+    && char_before_cursor_is_dot(source, pos)
+  | _ => false
+  };
+};
+
 let use_items_context = (tree: parse_tree, source, pos: position, node) =>
   switch (Tree.node_or_ancestor(node, Kind.use_expression)) {
   | None => None
@@ -291,12 +339,18 @@ let use_items_context = (tree: parse_tree, source, pos: position, node) =>
     }
   };
 
+let use_path_kind = (source, pos: position) =>
+  switch (Text.qualifier_from_line(source, pos)) {
+  | Some(qualifier) => UseModulePath(qualifier)
+  | None => ImportPath
+  };
+
 let context_fallback = (~check_include, tree, pos, cursor_byte, node) =>
-  switch (Tree.node_or_ancestor(node, Kind.use_expression)) {
+  switch (use_expression_ancestor(tree, pos, node)) {
   | Some(_) =>
     switch (use_items_context(tree, Tree.source(tree), pos, node)) {
     | Some(kind) => kind
-    | None => ImportPath
+    | None => use_path_kind(Tree.source(tree), pos)
     }
   | None
       when
@@ -320,6 +374,8 @@ let rec detect_kind =
         ) =>
   if (cursor_in_string_literal(pos, node)) {
     Suppressed;
+  } else if (cursor_after_use_dot(tree, source, pos, node)) {
+    UseShape;
   } else if (Keyword_slots.Match_slot.cursor_at_when_keyword_slot(
                tree,
                source,
@@ -344,7 +400,7 @@ let rec detect_kind =
     if (kind == Kind.use_expression) {
       switch (use_items_context(tree, source, pos, node)) {
       | Some(kind) => kind
-      | None => ImportPath
+      | None => use_path_kind(source, pos)
       };
     } else if (kind == Kind.include_declaration) {
       import_context_kind(tree, pos);

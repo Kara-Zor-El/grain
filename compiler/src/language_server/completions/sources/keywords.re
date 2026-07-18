@@ -72,16 +72,6 @@ let keyword_candidates =
          | Some(_) => Some(SnippetFormat)
          | None => None
          };
-       let command =
-         switch (entry.snippet) {
-         | Some(_) =>
-           let command: Protocol.command = {
-             title: "",
-             command: "editor.action.triggerSuggest",
-           };
-           Some(command);
-         | None => None
-         };
        make_candidate(
          ~source=KeywordSource,
          ~label=entry.label,
@@ -90,7 +80,6 @@ let keyword_candidates =
          ~context,
          ~insert_text=?entry.snippet,
          ~insert_text_format?,
-         ~command?,
          ~sort_label=?entry.sort_label,
          (),
        );

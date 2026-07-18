@@ -13,7 +13,6 @@ let make_candidate =
       ~filter_text=?,
       ~insert_text=?,
       ~insert_text_format=?,
-      ~command=?,
       ~sort_label=?,
       ~tags=?,
       (),
@@ -40,6 +39,17 @@ let make_candidate =
     switch (sort_label) {
     | Some(sort_label) => "00_" ++ sort_label
     | None => Relevance.to_sort_text(~relevance, ~label)
+    };
+  let command =
+    switch (kind) {
+    | Snippet =>
+      Some(
+        {
+          title: "",
+          command: "editor.action.triggerSuggest",
+        }: Protocol.command,
+      )
+    | _ => None
     };
   let item = {
     label,

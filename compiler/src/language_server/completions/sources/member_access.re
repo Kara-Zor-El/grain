@@ -75,6 +75,15 @@ let module_candidates = (~context, ~qualifier, env) =>
     env,
   );
 
+let use_path_candidates = (~context, ~qualifier, env) =>
+  member_candidates(
+    ~context,
+    ~qualifier,
+    ~include_export=kind => kind == Modules.Module,
+    ~completion_kind=_ => Module,
+    env,
+  );
+
 let type_candidates = (~context, ~qualifier, env) =>
   member_candidates(
     ~context,
@@ -115,6 +124,23 @@ let use_completion_kind = (kind: Modules.export_kind) =>
   | Modules.Exception => Constructor
   | Modules.Module => Module
   };
+
+let use_shape_snippet_candidate = (~context) => {
+  [
+    make_candidate(
+      ~source=TreeSitter,
+      ~label="{ }",
+      ~kind=Snippet,
+      ~detail="use bindings",
+      ~sort_group=Sort_group.Typed,
+      ~filter_text="{",
+      ~insert_text="{ $1 }",
+      ~insert_text_format=SnippetFormat,
+      ~context,
+      (),
+    ),
+  ];
+};
 
 let use_item_candidates =
     (~context, ~qualifier, ~slot: Syntax.Types.use_item_slot, env) => {

@@ -124,6 +124,8 @@ let resolve_keyword_slot = (tree: parse_tree, source, pos: position, kind) => {
       switch (kind) {
       | Suppressed => None
       | UseItems(_, _) => None
+      | UseModulePath(_) => None
+      | UseShape => None
       | MatchGuardKeyword => Some(MatchGuard)
       | _ => Keyword_slot.resolve(tree, pos, source)
       }
