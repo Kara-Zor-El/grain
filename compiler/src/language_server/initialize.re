@@ -16,14 +16,26 @@ type text_document_client_capability = {
   type_definition: option(link_support_capability),
 };
 
+// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#generalClientCapabilities
+// NOTE: moved into generalClientCapabilities in 3.18 but same structure as:
+// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#clientCapabilities
+[@deriving yojson({strict: false})]
+type general_client_capability = {
+  [@key "positionEncodings"] [@default []]
+  position_encodings: list(string),
+};
+
 [@deriving yojson({strict: false})]
 type client_capabilities = {
+  [@key "general"] [@default None]
+  general: option(general_client_capability),
   [@key "textDocument"] [@default None]
   text_document: option(text_document_client_capability),
 };
 
 let client_definition_link_support = ref(false);
 let client_type_definition_link_support = ref(false);
+let position_encoding = ref("utf-16");
 
 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeParams
 module RequestParams = {
@@ -67,6 +79,21 @@ let take_text_document_link_support = (params: RequestParams.t) =>
     )
   | _ => (false, false)
   };
+
+// Prefer utf-8 when the client offers it. Otherwise use utf-16 (mandatory by LSP spec)
+// vscode does not let the extension run if utf-16 is not offered.
+let take_position_encoding = (params: RequestParams.t) => {
+  let encodings =
+    switch (params.capabilities) {
+    | Some({general: Some({position_encodings})}) => position_encodings
+    | _ => []
+    };
+  if (List.mem("utf-8", encodings)) {
+    "utf-8";
+  } else {
+    "utf-16";
+  };
+};
 
 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeResult
 module ResponseResult = {
@@ -112,8 +139,8 @@ module ResponseResult = {
   [@deriving yojson]
   type t = {capabilities: lsp_capabilities};
 
-  let capabilities = {
-    position_encoding: "utf-8",
+  let capabilities = position_encoding => {
+    position_encoding,
     document_formatting_provider: true,
     text_document_sync: Full,
     hover_provider: true,
@@ -149,10 +176,14 @@ let process =
     take_text_document_link_support(params);
   client_definition_link_support := definition_ls;
   client_type_definition_link_support := type_definition_ls;
+  let encoding = take_position_encoding(params);
+  position_encoding := encoding;
   // The initialize request can set up the initial trace level
   Trace.set_level(params.trace);
   Protocol.response(
     ~id,
-    ResponseResult.to_yojson({capabilities: ResponseResult.capabilities}),
+    ResponseResult.to_yojson({
+      capabilities: ResponseResult.capabilities(encoding),
+    }),
   );
 };

@@ -77,6 +77,49 @@ describe("grainlsp", ({test, testSkip}) => {
   let assertLspOutput = makeLspRunner(test_or_skip);
   let assertLspDiagnostics = makeLspDiagnosticsRunner(test_or_skip);
 
+  let assertPositionEncoding = (name, ~initialize_params, ~expected_encoding) => {
+    test_or_skip(
+      name,
+      ({expect}) => {
+        let (setup_request, teardown_request) =
+          lsp_setup_teardown_requests(
+            ~initialize_params,
+            "file:///a.gr",
+            "module A\n",
+          );
+        let (result, code) = lsp(setup_request ++ teardown_request);
+        assert_lsp_responses(
+          expect,
+          `Assoc([
+            ("uri", `String("file:///a.gr")),
+            ("diagnostics", `List([])),
+          ]),
+          ~position_encoding=expected_encoding,
+          result,
+        );
+        expect.int(code).toBe(0);
+      },
+    );
+  };
+
+  assertPositionEncoding(
+    "position_encoding_prefers_utf8_when_offered",
+    ~initialize_params=lsp_default_initialize_params,
+    ~expected_encoding="utf-8",
+  );
+
+  assertPositionEncoding(
+    "position_encoding_utf16_when_client_only_offers_utf16",
+    ~initialize_params=lsp_initialize_params_utf16_only,
+    ~expected_encoding="utf-16",
+  );
+
+  assertPositionEncoding(
+    "position_encoding_defaults_to_utf16_when_unnegotiated",
+    ~initialize_params=lsp_initialize_params_without_position_encodings,
+    ~expected_encoding="utf-16",
+  );
+
   assertLspOutput(
     "goto_definition1",
     "file:///a.gr",
