@@ -51,6 +51,41 @@ let member_candidates =
     [];
   };
 
+let constructor_candidates = (~context, ~qualifier, env) =>
+  try(
+    Env.fold_constructors(
+      (cstr, candidates) =>
+        switch (cstr.Types.cstr_tag) {
+        | CstrExtension(_, _, _, _) => candidates
+        | _ => [
+            make_candidate(
+              ~source=Typedtree,
+              ~label=cstr.Types.cstr_name,
+              ~kind=Constructor,
+              ~detail=Printtyp.string_of_type_scheme(cstr.Types.cstr_res),
+              ~sort_group=Sort_group.Typed,
+              ~context,
+              (),
+            ),
+            ...candidates,
+          ]
+        },
+      Some(Identifier.parse(qualifier)),
+      env,
+      [],
+    )
+  ) {
+  | Not_found => []
+  | exn =>
+    Trace.log(
+      "Completion constructor member access failed for qualifier `"
+      ++ qualifier
+      ++ "`: "
+      ++ Printexc.to_string(exn),
+    );
+    [];
+  };
+
 let module_candidates = (~context, ~qualifier, env) =>
   member_candidates(
     ~context,
@@ -73,7 +108,8 @@ let module_candidates = (~context, ~qualifier, env) =>
         | Modules.Module => Module
         },
     env,
-  );
+  )
+  @ constructor_candidates(~context, ~qualifier, env);
 
 let use_path_candidates = (~context, ~qualifier, env) =>
   member_candidates(

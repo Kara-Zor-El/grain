@@ -1046,6 +1046,57 @@ let z = String.
     expect.int(code).toBe(0);
   });
 
+  test_or_skip("completion_member_access_constructor", ({expect}) => {
+    let code_uri = "file:///a.gr";
+    let initial_code = {|module A
+module Colors {
+  provide enum Color { Hex(String), RGB }
+  provide let dummy = 1
+}
+let x = Colors.Hex("")
+|};
+    let changed_code = {|module A
+module Colors {
+  provide enum Color { Hex(String), RGB }
+  provide let dummy = 1
+}
+let x = Colors.
+|};
+    let (setup_request, teardown_request) =
+      lsp_setup_teardown_requests(code_uri, initial_code);
+    let change_request =
+      lsp_notification(
+        "textDocument/didChange",
+        `Assoc([
+          (
+            "textDocument",
+            `Assoc([("uri", `String(code_uri)), ("version", `Int(2))]),
+          ),
+          (
+            "contentChanges",
+            `List([`Assoc([("text", `String(changed_code))])]),
+          ),
+        ]),
+      );
+    let request =
+      lsp_input(
+        "textDocument/completion",
+        lsp_text_document_position(code_uri, 5, 15),
+      );
+    let (result, code) =
+      lsp(
+        setup_request
+        ++ lsp_request(change_request)
+        ++ lsp_request(request)
+        ++ teardown_request,
+      );
+
+    expect.bool(string_contains(result, {|"label":"Hex"|})).toBe(true);
+    expect.bool(string_contains(result, {|"label":"RGB"|})).toBe(true);
+    expect.bool(string_contains(result, {|"label":"Color"|})).toBe(false);
+    expect.int(code).toBe(0);
+  });
+
   test_or_skip("completion_string_literal_no_member_access", ({expect}) => {
     let code_uri = "file:///a.gr";
     let code = {|module A
