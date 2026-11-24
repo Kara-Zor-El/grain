@@ -12,7 +12,7 @@ doc:
   "https://ocaml.janestreet.com/ocaml-core/latest/doc/ocaml_intrinsics_kernel/index.html"
 bug-reports: "https://github.com/janestreet/ocaml_intrinsics_kernel/issues"
 depends: [
-  "ocaml" {>= "5.1.0" & < "5.6"}
+  "ocaml" {>= "5.1.0"}
   "dune" {>= "3.11.0"}
 ]
 available: arch != "x86_32"

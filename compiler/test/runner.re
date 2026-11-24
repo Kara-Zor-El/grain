@@ -813,7 +813,7 @@ let assert_lsp_responses =
       lsp_success_response(
         Yojson.Safe.from_string(
           Printf.sprintf(
-            {|{"capabilities":{"positionEncoding":"%s","documentFormattingProvider":true,"textDocumentSync":1,"hoverProvider":true,"completionProvider":{"resolveProvider":false,"triggerCharacters":[".",",","@","\""," ","<","(",":"]},"definitionProvider":true,"typeDefinitionProvider":true,"referencesProvider":false,"documentSymbolProvider":true,"codeActionProvider":true,"codeLensProvider":{"resolveProvider":true},"documentHighlightProvider":false,"documentRangeFormattingProvider":false,"renameProvider":false,"inlayHintProvider":{"resolveProvider":false}}}|},
+            {|{"capabilities":{"positionEncoding":"%s","documentFormattingProvider":true,"textDocumentSync":1,"hoverProvider":true,"completionProvider":{"resolveProvider":false,"triggerCharacters":[".",",","@","\""," ","<","(",":"]},"definitionProvider":true,"typeDefinitionProvider":true,"referencesProvider":false,"documentSymbolProvider":true,"codeActionProvider":true,"codeLensProvider":{"resolveProvider":false},"documentHighlightProvider":false,"documentRangeFormattingProvider":false,"renameProvider":false,"inlayHintProvider":{"resolveProvider":false}}}|},
             position_encoding,
           ),
         ),

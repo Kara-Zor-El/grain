@@ -95,21 +95,55 @@ let search_path_candidates = (~context: Syntax.Types.t) => {
     [];
   } else {
     let display_prefix = display_prefix_of(prefix);
-    Config.module_search_path()
-    |> List.fold_left(
-         (acc, base_dir) => {
-           let candidate_dir =
-             Filepath.String.concat(base_dir, display_prefix);
-           candidates_from_dir(
-             ~context,
-             ~base_dir=candidate_dir,
-             ~display_prefix,
-             ~strip_extension=true,
-           )
-           @ acc;
-         },
-         [],
-       );
+    let stdlib_candidates =
+      switch (Config.stdlib_dir^) {
+      | None => []
+      | Some(dir) =>
+        let candidate_dir =
+          Filepath.String.concat(Filepath.to_string(dir), display_prefix);
+        candidates_from_dir(
+          ~context,
+          ~base_dir=candidate_dir,
+          ~display_prefix,
+          ~strip_extension=true,
+        );
+      };
+    let library_candidates =
+      switch (Filepath.String.first_segment(prefix)) {
+      | None when display_prefix == "" =>
+        List.map(
+          ((name, _)) =>
+            make_candidate(
+              ~source=Filesystem,
+              ~label=name ++ "/",
+              ~kind=Folder,
+              ~sort_group=Sort_group.Import,
+              ~context,
+              (),
+            ),
+          Config.libraries^,
+        )
+      | Some((first, _)) when List.mem_assoc(first, Config.libraries^) =>
+        let lib_root =
+          Filepath.to_string(List.assoc(first, Config.libraries^));
+        let rest_prefix =
+          String.length(display_prefix) > String.length(first) + 1
+            ? String.sub(
+                display_prefix,
+                String.length(first) + 1,
+                String.length(display_prefix) - String.length(first) - 1,
+              )
+            : "";
+        let candidate_dir = Filepath.String.concat(lib_root, rest_prefix);
+        candidates_from_dir(
+          ~context,
+          ~base_dir=candidate_dir,
+          ~display_prefix,
+          ~strip_extension=true,
+        )
+      | _ => []
+      };
+    stdlib_candidates @ library_candidates;
   };
 };
 
@@ -166,10 +200,22 @@ let source_file_for_import = (~base_dir, import_path) => {
     if (is_relative_import(import_path) || !Filename.is_relative(import_path)) {
       [import_path];
     } else {
-      List.map(
-        search_dir => Filepath.String.concat(search_dir, import_path),
-        Config.module_search_path(),
-      );
+      let from_stdlib =
+        switch (Config.stdlib_dir^) {
+        | Some(dir) => [
+            Filepath.String.concat(Filepath.to_string(dir), import_path),
+          ]
+        | None => []
+        };
+      let from_library =
+        switch (Filepath.String.first_segment(import_path)) {
+        | Some((first, rest)) when List.mem_assoc(first, Config.libraries^) =>
+          let lib_root =
+            Filepath.to_string(List.assoc(first, Config.libraries^));
+          [Filepath.String.concat(lib_root, rest)]
+        | _ => []
+        };
+      from_stdlib @ from_library;
     };
   let with_extension =
     List.fold_left(

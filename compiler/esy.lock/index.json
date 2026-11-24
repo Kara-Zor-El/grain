@@ -1,5 +1,5 @@
 {
-  "checksum": "a7de8a368aaefe2b08047f94a68e38d2",
+  "checksum": "8a5540d0f3106e5893d6690f777ed6f5",
   "root": "@grain/compiler@link-dev:./esy.json",
   "node": {
     "ocaml@5.2.0@d41d8cd9": {
@@ -2422,7 +2422,6 @@
       "overrides": [],
       "dependencies": [
         "ocaml@5.2.0@d41d8cd9", "@opam/tree-sitter@opam:0.1.0@cfa3b3f0",
-        "@opam/dune-configurator@opam:3.25.0@b1d90d01",
         "@opam/dune@opam:3.25.0@e9482589"
       ],
       "devDependencies": [],
@@ -2434,8 +2433,8 @@
         [ "windows", "x86_64" ]
       ]
     },
-    "@grain/libbinaryen@132.0.0@d41d8cd9": {
-      "id": "@grain/libbinaryen@132.0.0@d41d8cd9",
+    "@grain/libbinaryen@133.0.0@d41d8cd9": {
+      "id": "@grain/libbinaryen@133.0.0@d41d8cd9",
       "name": "@grain/libbinaryen",
       "version": "133.0.0",
       "source": {
@@ -2507,7 +2506,7 @@
         "@opam/dune@opam:3.25.0@e9482589",
         "@opam/cmdliner@opam:2.1.2@2365ab15",
         "@grain/grain-tree-sitter.ml@link:../../grain-tree-sitter.ml",
-        "@grain/binaryen.ml@0.42.0@d41d8cd9"
+        "@grain/binaryen.ml@0.43.0@d41d8cd9"
       ],
       "devDependencies": [
         "@opam/rely@github:reasonml/reason-native:rely.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8@d41d8cd9",
@@ -2537,7 +2536,7 @@
         "ocaml@5.2.0@d41d8cd9",
         "@opam/dune-configurator@opam:3.25.0@b1d90d01",
         "@opam/dune@opam:3.25.0@e9482589",
-        "@grain/libbinaryen@132.0.0@d41d8cd9"
+        "@grain/libbinaryen@133.0.0@d41d8cd9"
       ],
       "devDependencies": [],
       "installConfig": { "pnp": false },
